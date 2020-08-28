@@ -30,11 +30,25 @@ def create_fields(opt):
     if opt.trg_lang not in spacy_langs:
         print('invalid trg language: ' + opt.trg_lang + 'supported languages : ' + spacy_langs)
     
+    lang_compatibility = {
+        'en': 'en_core_web_md',
+        'pt': 'pt_core_news_md',
+        'fr': 'fr_core_news_md',
+        'de': 'de_core_news_md',
+        'es': 'es_core_news_md'
+    }
+    
+    src_lang = lang_compatibility[opt.src_lang]
+    trg_lang = lang_compatibility[opt.trg_lang]
+
     print("loading spacy tokenizers...")
     
-    t_src = tokenize(opt.src_lang)
-    t_trg = tokenize(opt.trg_lang)
-
+    try:
+        t_src = tokenize(src_lang)
+        t_trg = tokenize(trg_lang)
+    except Exception as e: 
+        print(f'Reached exception {e}.\n Please download model using python -m spacy download.')
+        
     TRG = data.Field(lower=True, tokenize=t_trg.tokenizer, init_token='<sos>', eos_token='<eos>')
     SRC = data.Field(lower=True, tokenize=t_src.tokenizer)
 
