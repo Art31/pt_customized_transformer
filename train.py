@@ -86,11 +86,13 @@ def main():
     parser.add_argument('-checkpoint', type=int, default=0)
 
     opt = parser.parse_args()
-    
+
     opt.device = 0 if opt.no_cuda is False else -1
-    if opt.device == 0:
+    if opt.no_cuda is False:
         assert torch.cuda.is_available()
+        opt.device = torch.device("cuda")
     
+    # import ipdb; ipdb.set_trace()
     read_data(opt)
     SRC, TRG = create_fields(opt)
     opt.train = create_dataset(opt, SRC, TRG)
