@@ -2,7 +2,7 @@ import argparse
 import time
 import torch
 from Models import get_model
-from Process import *
+from Process import create_dataset, create_fields, read_data
 import torch.nn.functional as F
 from Optim import CosineWithRestarts
 from Batch import create_masks
@@ -32,24 +32,26 @@ def multiple_replace(dict, text):
   return regex.sub(lambda mo: dict[mo.string[mo.start():mo.end()]], text) 
 
 def translate_sentence(sentence, model, opt, SRC, TRG):
-    
     model.eval()
     indexed = []
     sentence = SRC.preprocess(sentence)
+    import ipdb; ipdb.set_trace()
     for tok in sentence:
         if SRC.vocab.stoi[tok] != 0 or opt.floyd == True:
             indexed.append(SRC.vocab.stoi[tok])
         else:
-            indexed.append(get_synonym(tok, SRC))
+            indexed.append(0)
+        #     indexed.append(get_synonym(tok, SRC))
     sentence = Variable(torch.LongTensor([indexed]))
     if opt.no_cuda is False:
         sentence = sentence.cuda()
-    
+    import ipdb; ipdb.set_trace()
     sentence = beam_search(sentence, model, SRC, TRG, opt)
 
     return  multiple_replace({' ?' : '?',' !':'!',' .':'.','\' ':'\'',' ,':','}, sentence)
 
 def translate(opt, model, SRC, TRG):
+    import ipdb; ipdb.set_trace()
     sentences = opt.text.lower().split('.')
     translated = []
 
@@ -91,6 +93,7 @@ def main():
         if opt.text=='f':
             fpath =input("Enter a sentence to translate (type 'f' to load from file, or 'q' to quit):\n")
             try:
+                import ipdb; ipdb.set_trace()
                 opt.text = ' '.join(open(opt.text, encoding='utf-8').read().split('\n'))
             except:
                 print("error opening or reading text file")
