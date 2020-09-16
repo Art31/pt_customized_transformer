@@ -55,7 +55,7 @@ def create_fields(opt):
     if opt.load_weights is not None:
         try:
             print("loading presaved fields...")
-            import ipdb; ipdb.set_trace()
+            # import ipdb; ipdb.set_trace()
             SRC = pickle.load(open(f'{opt.load_weights}/SRC.pkl', 'rb'))
             TRG = pickle.load(open(f'{opt.load_weights}/TRG.pkl', 'rb'))
         except:

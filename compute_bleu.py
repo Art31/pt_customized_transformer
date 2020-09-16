@@ -55,6 +55,7 @@ def translate(opt, model, SRC, TRG):
     translated = []
 
     for sentence in tqdm(sentences):
+        import ipdb; ipdb.set_trace()
         translated.append(translate_sentence(sentence + '.', model, opt, SRC, TRG).capitalize())
 
     return ('\n'.join(translated))
