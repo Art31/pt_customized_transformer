@@ -52,12 +52,13 @@ def translate_sentence(sentence, model, opt, SRC, TRG):
     return  multiple_replace({' ?' : '?',' !':'!',' .':'.','\' ':'\'',' ,':','}, sentence)
 
 def translate(opt, model, SRC, TRG):
-    sentences = [text.lower().split('.') for text in opt.text]
+    sentences = [text.lower() for text in opt.text]
     translated = []
 
     for sentence in tqdm(sentences):
-        import ipdb; ipdb.set_trace()
-        translated.append(translate_sentence(sentence + '.', model, opt, SRC, TRG).capitalize())
+        if sentence.__contains__('.') == False:
+            sentence = sentence + '.'
+        translated.append(translate_sentence(sentence, model, opt, SRC, TRG).capitalize())
 
     return ('\n'.join(translated))
 
