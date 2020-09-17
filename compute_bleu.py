@@ -46,7 +46,7 @@ def translate_sentence(sentence, model, opt, SRC, TRG):
     sentence = Variable(torch.LongTensor([indexed]))
     if opt.no_cuda is False:
         sentence = sentence.cuda()
-    import ipdb; ipdb.set_trace()
+    # import ipdb; ipdb.set_trace()
     sentence = beam_search(sentence, model, SRC, TRG, opt)
 
     return  multiple_replace({' ?' : '?',' !':'!',' .':'.','\' ':'\'',' ,':','}, sentence)
