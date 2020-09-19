@@ -32,7 +32,7 @@ def multiple_replace(dict, text):
   # For each match, look-up corresponding value in dictionary
   return regex.sub(lambda mo: dict[mo.string[mo.start():mo.end()]], text) 
 
-def translate_sentence(sentence, model, opt, SRC, TRG):
+def translate_sentence(sentence, model, opt, SRC, TRG, counter):
     model.eval()
     indexed = []
     sentence = SRC.preprocess(sentence)
@@ -47,18 +47,23 @@ def translate_sentence(sentence, model, opt, SRC, TRG):
     if opt.no_cuda is False:
         sentence = sentence.cuda()
     # import ipdb; ipdb.set_trace()
-    sentence = beam_search(sentence, model, SRC, TRG, opt)
-
+    try: 
+        sentence = beam_search(sentence, model, SRC, TRG, opt)
+    except:
+        sentence = ''
+        print(f'Error happened at sentence {counter}!')
+        import ipdb; ipdb.set_trace()
+        
     return  multiple_replace({' ?' : '?',' !':'!',' .':'.','\' ':'\'',' ,':','}, sentence)
 
 def translate(opt, model, SRC, TRG):
     sentences = [text.lower() for text in opt.text]
     translated = []
 
-    for sentence in tqdm(sentences):
+    for i, sentence in tqdm(enumerate(sentences)):
         if sentence.__contains__('.') == False:
             sentence = sentence + '.'
-        translated.append(translate_sentence(sentence, model, opt, SRC, TRG).capitalize())
+        translated.append(translate_sentence(sentence, model, opt, SRC, TRG, i).capitalize())
 
     return ('\n'.join(translated))
 

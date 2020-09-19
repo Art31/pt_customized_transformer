@@ -87,7 +87,10 @@ def beam_search(src, model, SRC, TRG, opt):
             break
     
     if ind is None:
-        length = (outputs[0]==eos_tok).nonzero()[0]
+        try:
+            length = (outputs[0]==eos_tok).nonzero()[0]
+        except:
+            import ipdb; ipdb.set_trace()
         return ' '.join([TRG.vocab.itos[tok] for tok in outputs[0][1:length]])
     
     else:
