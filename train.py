@@ -64,6 +64,16 @@ def train_model(model, opt):
 
 def main():
 
+    ############################
+    ### OPTIONAL 4 THe FUTURE ##
+    # DO WEIGHT DECAY BASED ON #
+    # ATTENTION PAPER !!!!! ####
+    ############################
+    # step_list = [i*500 for i in range(2000)]
+    # for step in step_list:
+    #     lrate = (1/np.sqrt(512)) * min(1/np.sqrt(step), step*4000**-1.5 )
+    #     print(f'{step}: lrate {lrate}')
+
     parser = argparse.ArgumentParser()
     parser.add_argument('-src_data', required=True)
     parser.add_argument('-trg_data', required=True)
@@ -78,7 +88,7 @@ def main():
     parser.add_argument('-dropout', type=int, default=0.1)
     parser.add_argument('-batchsize', type=int, default=1500)
     parser.add_argument('-printevery', type=int, default=100)
-    parser.add_argument('-lr', type=int, default=0.0001)
+    parser.add_argument('-lr', type=int, default=0.0005)
     parser.add_argument('-load_weights')
     parser.add_argument('-create_valset', action='store_true')
     parser.add_argument('-max_strlen', type=int, default=80)
@@ -87,6 +97,12 @@ def main():
     parser.add_argument('-gpt_inspired_model', action='store_true')
 
     opt = parser.parse_args()
+
+    if opt.gpt_inspired_model == True:
+        opt.d_model = 640
+        opt.batchsize = 2048
+        opt.learning_rate = 0.00009
+        opt.heads = 10
 
     opt.device = 0 if opt.no_cuda is False else -1
     if opt.no_cuda is False:
