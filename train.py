@@ -88,7 +88,7 @@ def main():
     parser.add_argument('-dropout', type=int, default=0.1)
     parser.add_argument('-batchsize', type=int, default=1500)
     parser.add_argument('-printevery', type=int, default=100)
-    parser.add_argument('-lr', type=int, default=0.0005)
+    parser.add_argument('-lr', type=int, default=0.0001)
     parser.add_argument('-load_weights')
     parser.add_argument('-create_valset', action='store_true')
     parser.add_argument('-max_strlen', type=int, default=80)
@@ -97,13 +97,13 @@ def main():
     parser.add_argument('-gpt_inspired_model', action='store_true')
 
     opt = parser.parse_args()
-    print(opt)
 
-    if opt.gpt_inspired_model == True:
-        opt.d_model = 640
-        opt.batchsize = 2048
-        opt.learning_rate = 0.0003
-        opt.heads = 10
+    # if opt.gpt_inspired_model == True:
+    #     opt.d_model = 640
+    #     opt.batchsize = 2048
+    #     opt.learning_rate = 0.0003
+    #     opt.heads = 10
+    print(opt)
 
     opt.device = 0 if opt.no_cuda is False else -1
     if opt.no_cuda is False:
