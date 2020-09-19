@@ -28,13 +28,13 @@ class DecoderLayer(nn.Module):
         self.norm_list = [Norm(d_model) for i in range(12)]
         self.dropout_list = [nn.Dropout(dropout) for i in range(12)]
         
-        # self.norm_1 = Norm(d_model)
-        # self.norm_2 = Norm(d_model)
-        # self.norm_3 = Norm(d_model)
+        self.norm_1 = Norm(d_model)
+        self.norm_2 = Norm(d_model)
+        self.norm_3 = Norm(d_model)
         
-        # self.dropout_1 = nn.Dropout(dropout)
-        # self.dropout_2 = nn.Dropout(dropout)
-        # self.dropout_3 = nn.Dropout(dropout)
+        self.dropout_1 = nn.Dropout(dropout)
+        self.dropout_2 = nn.Dropout(dropout)
+        self.dropout_3 = nn.Dropout(dropout)
         
         if gpt_inspired_model == True:
             self.attn_1_1 = MultiHeadAttention(heads, d_model, dropout=dropout)
@@ -88,11 +88,11 @@ class DecoderLayer(nn.Module):
             x2 = self.norm_list[11](x)
             x = x + self.dropout_list[11](self.ff_4(x2))
         else: 
-            x2 = self.norm_list[0](x)
-            x = x + self.dropout_list[0](self.attn_1(x2, x2, x2, trg_mask))
-            x2 = self.norm_list[1](x)
-            x = x + self.dropout_list[1](self.attn_2(x2, e_outputs, e_outputs, \
+            x2 = self.norm_1(x)
+            x = x + self.dropout_1(self.attn_1(x2, x2, x2, trg_mask))
+            x2 = self.norm_2(x)
+            x = x + self.dropout_2(self.attn_2(x2, e_outputs, e_outputs, \
             src_mask))
-            x2 = self.norm_list[2](x)
-            x = x + self.dropout_list[2](self.ff(x2))
+            x2 = self.norm_3(x)
+            x = x + self.dropout_3(self.ff(x2))
         return x
