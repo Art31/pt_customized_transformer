@@ -84,6 +84,7 @@ def main():
     parser.add_argument('-max_strlen', type=int, default=80)
     parser.add_argument('-floyd', action='store_true')
     parser.add_argument('-checkpoint', type=int, default=0)
+    parser.add_argument('-gpt_inspired_model', action='store_true')
 
     opt = parser.parse_args()
 
