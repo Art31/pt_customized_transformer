@@ -132,7 +132,7 @@ def promptNextAction(model, opt, SRC, TRG):
         dst = 'weights'
 
     while True:
-        save = yesno(input(f'{pd.to_datetime('today')}: training complete, save results? [y/n] : '))
+        save = yesno(input(f"{pd.to_datetime('today')}: training complete, save results? [y/n] : "))
         if save == 'y':
             while True:
                 if saved_once != 0:
