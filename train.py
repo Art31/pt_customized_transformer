@@ -97,11 +97,12 @@ def main():
     parser.add_argument('-gpt_inspired_model', action='store_true')
 
     opt = parser.parse_args()
+    print(opt)
 
     if opt.gpt_inspired_model == True:
         opt.d_model = 640
         opt.batchsize = 2048
-        opt.learning_rate = 0.00009
+        opt.learning_rate = 0.0003
         opt.heads = 10
 
     opt.device = 0 if opt.no_cuda is False else -1
