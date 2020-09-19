@@ -95,7 +95,7 @@ def main():
     except:
         print("error opening or reading text file")
     phrase = translate(opt, model, SRC, TRG)
-
+    import ipdb; ipdb.set_trace()
     f = open(opt.output, "w+")
     f.write(phrase)
     f.close()
