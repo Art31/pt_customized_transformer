@@ -100,7 +100,7 @@ def main():
 
     if opt.gpt_inspired_model == True:
         # opt.d_model = 640
-        opt.batchsize = 4096
+        opt.batchsize = 8192
         opt.learning_rate = 0.00015
         # opt.heads = 10
     print(opt)
