@@ -104,6 +104,7 @@ def main():
         # opt.lr = 0.00005
         # opt.n_layers = 8
         # opt.heads = 10
+        pass
     print(opt)
 
     opt.device = 0 if opt.no_cuda is False else -1
