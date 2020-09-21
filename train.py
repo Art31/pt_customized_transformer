@@ -101,7 +101,7 @@ def main():
     if opt.gpt_inspired_model == True:
         # opt.d_model = 640
         opt.batchsize = 8192
-        opt.lr = 0.0005
+        opt.lr = 0.00005
         opt.n_layers = 8
         # opt.heads = 10
     print(opt)
