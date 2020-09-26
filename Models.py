@@ -32,7 +32,7 @@ class Decoder(nn.Module):
         self.N = N
         self.embed = Embedder(vocab_size, d_model)
         self.pe = PositionalEncoder(d_model, dropout=dropout)
-        self.layers = get_clones(DecoderLayer(d_model, heads, dropout, decoder_extra_layers), N, decoder_extra_layers)
+        self.layers = get_clones(DecoderLayer(d_model, heads, decoder_extra_layers, dropout), N, decoder_extra_layers)
         self.norm = Norm(d_model)
     def forward(self, trg, e_outputs, src_mask, trg_mask):
         x = self.embed(trg)
