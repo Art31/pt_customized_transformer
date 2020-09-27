@@ -5,7 +5,7 @@ from tqdm import tqdm
 from nltk.translate.bleu_score import corpus_bleu
 from typing import List, Tuple, Dict, Set, Union
 
-def compute_corpus_level_bleu_scorer(references: List[List[str]], hypotheses: List[str]) -> float:
+def compute_corpus_level_bleu_score(references: List[List[str]], hypotheses: List[str]) -> float:
     """ Given decoding results and reference sentences, compute corpus-level BLEU score.
     @param references (List[List[str]]): a list of gold-standard reference target sentences
     @param hypotheses (List[Hypothesis]): a list of hypotheses, one for each reference
