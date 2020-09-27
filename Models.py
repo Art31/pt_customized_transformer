@@ -64,7 +64,7 @@ def get_model(opt, src_vocab, trg_vocab):
     if opt.load_weights is not None:
         print("loading pretrained weights...")
         # model = nn.DataParallel(model)
-        model.load_state_dict(torch.load(f'{opt.load_weights}/model_weights'), strict=False)
+        model.load_state_dict(torch.load(f'{opt.load_weights}/model_weights'))
     else:
         for p in model.parameters():
             if p.dim() > 1:
