@@ -84,6 +84,7 @@ def main():
     parser.add_argument('-dropout', type=int, default=0.1)
     parser.add_argument('-no_cuda', action='store_true')
     parser.add_argument('-floyd', action='store_true')
+    parser.add_argument('-decoder_extra_layers', type=int, default=0)
     
     opt = parser.parse_args()
 
