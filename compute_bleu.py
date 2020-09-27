@@ -1,111 +1,75 @@
 import argparse
-import time
-import torch
+from google.cloud import translate_v2 as translate
+import six
 from tqdm import tqdm
-from Models import get_model
-from Process import create_dataset, create_fields, read_data
-import torch.nn.functional as F
-from Optim import CosineWithRestarts
-from Batch import create_masks
-import pdb
-import dill as pickle
-import argparse
-from Models import get_model
-from Beam import beam_search
-from nltk.corpus import wordnet
-from torch.autograd import Variable
-import re
+from nltk.translate.bleu_score import corpus_bleu
+from typing import List, Tuple, Dict, Set, Union
 
-def get_synonym(word, SRC):
-    syns = wordnet.synsets(word)
-    for s in syns:
-        for l in s.lemmas():
-            if SRC.vocab.stoi[l.name()] != 0:
-                return SRC.vocab.stoi[l.name()]
-            
-    return 0
-
-def multiple_replace(dict, text):
-  # Create a regular expression  from the dictionary keys
-  regex = re.compile("(%s)" % "|".join(map(re.escape, dict.keys())))
-
-  # For each match, look-up corresponding value in dictionary
-  return regex.sub(lambda mo: dict[mo.string[mo.start():mo.end()]], text) 
-
-def translate_sentence(sentence, model, opt, SRC, TRG, counter):
-    model.eval()
-    indexed = []
-    sentence = SRC.preprocess(sentence)
-    # import ipdb; ipdb.set_trace()
-    for tok in sentence:
-        if SRC.vocab.stoi[tok] != 0 or opt.floyd == True:
-            indexed.append(SRC.vocab.stoi[tok])
-        else:
-            indexed.append(0)
-        #     indexed.append(get_synonym(tok, SRC))
-    sentence = Variable(torch.LongTensor([indexed]))
-    if opt.no_cuda is False:
-        sentence = sentence.cuda()
-    # import ipdb; ipdb.set_trace()
-    try: 
-        sentence = beam_search(sentence, model, SRC, TRG, opt)
-    except:
-        sentence = ''
-        print(f'Error happened at sentence {counter}!')
-        import ipdb; ipdb.set_trace()
-        
-    return  multiple_replace({' ?' : '?',' !':'!',' .':'.','\' ':'\'',' ,':','}, sentence)
-
-def translate(opt, model, SRC, TRG):
-    sentences = [text.lower() for text in opt.text]
-    translated = []
-
-    for i, sentence in tqdm(enumerate(sentences)):
-        if sentence.__contains__('.') == False:
-            sentence = sentence + '.'
-        translated.append(translate_sentence(sentence, model, opt, SRC, TRG, i).capitalize())
-
-    return ('\n'.join(translated))
+def compute_corpus_level_bleu_scoreresult_list(references: List[List[str]], hypotheses: List[str]) -> float:
+    """ Given decoding results and reference sentences, compute corpus-level BLEU score.
+    @param references (List[List[str]]): a list of gold-standard reference target sentences
+    @param hypotheses (List[Hypothesis]): a list of hypotheses, one for each reference
+    @returns bleu_score: corpus-level BLEU score
+    """
+    if references[0][0] == '<s>':
+        references = [ref[1:-1] for ref in references]
+    bleu_score = corpus_bleu([[ref] for ref in references],
+                             [hyp for hyp in hypotheses])
+    return bleu_score
 
 
-def main():
-    
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-translate_file', required=True)
-    parser.add_argument('-output', required=True)
-    parser.add_argument('-load_weights', required=True)
-    parser.add_argument('-k', type=int, default=3)
-    parser.add_argument('-max_len', type=int, default=80)
-    parser.add_argument('-d_model', type=int, default=512)
-    parser.add_argument('-n_layers', type=int, default=6)
-    parser.add_argument('-src_lang', required=True)
-    parser.add_argument('-trg_lang', required=True)
-    parser.add_argument('-heads', type=int, default=8)
-    parser.add_argument('-dropout', type=int, default=0.1)
-    parser.add_argument('-no_cuda', action='store_true')
-    parser.add_argument('-floyd', action='store_true')
-    
-    opt = parser.parse_args()
+def translate_sententeces(text_list, output)
+    """Translates text into the target language.
 
-    opt.device = 0 if opt.no_cuda is False else -1
- 
-    assert opt.k > 0
-    assert opt.max_len > 10
+    Target must be an ISO 639-1 language code.
+    See https://g.co/cloud/translate/v2/translate-reference#supported_languages
+    """
+    # RODAR export GOOGLE_APPLICATION_CREDENTIALS="/home/arthurtelles/gtranslate-api-290022-4899f0c9d3f7.json"
+    translate_client = translate.Client()
 
-    SRC, TRG = create_fields(opt)
-    model = get_model(opt, len(SRC.vocab), len(TRG.vocab))
-    
-    try:
-        opt.text = open(opt.translate_file, encoding='utf-8').read().split('\n')
-    except:
-        print("error opening or reading text file")
-    phrase = translate(opt, model, SRC, TRG)
-    import ipdb; ipdb.set_trace()
-    f = open(opt.output, "w+")
-    f.write(phrase)
-    f.close()
+    # text = 'ola eu gosto de framboesa'
+    result_list = []
+    # Text can also be a sequence of strings, in which case this method
+    # will return a sequence of results for each text.
+    for line in tqdm(text_list):
+        if isinstance(line, six.binary_type):
+            line = line.decode("utf-8")
+        result = translate_client.translate(line, target_language='en')
+        result_list.append(result)
+    # print(u"Text: {}".format(result["input"]))
+    # print(u"Translation: {}".format(result["translatedText"]))
+    # print(u"Detected source language: {}".format(result["detectedSourceLanguage"]))
+    text_file2 = open("eng_gtranslate.txt", "a")
+    for line in result_list:
+        text_file2.write(f"{line['translatedText']}\n")
+    text_file2.close()
+    return result_list
 
-    print('Sample >'+ phrase[:300] + '\n')
+parser = argparse.ArgumentParser()
+parser.add_argument('-input_file', required=True)
+parser.add_argument('-reference_file', required=True)
+parser.add_argument('-bleu_output', required=True)
+parser.add_argument('-translate_from_input', action='store_true')
 
-if __name__ == '__main__':
-    main()
+opt = parser.parse_args()
+
+print(f'Inputs: {opt}\n')
+
+# text_file1 = open("/home/arthurtelles/Downloads/port_test.txt", "r+").read()
+text_file1 = open(opt.input_file, "r+").read()
+translated_list = text_file1.split('\n')
+
+ref_file = open(opt.reference_file, "r+").read()
+ref_list = ref_file.split('\n')
+
+# não rodar pois já sabemos o resultado
+if opt.translate_from_input == True: 
+    result_list = translate_sententeces(translated_list)
+    translated_list = [result['translatedText'] for result in result_list]
+bleu_score = compute_corpus_level_bleu_score(list(ref_list), translated_list)
+
+text_file2 = open(opt.bleu_output, "a")
+message = f"Corpus bleu from file {opt.input_file}: {bleu_score}\n"
+print(message)
+text_file2.write(f"Corpus bleu from file {opt.input_file}: {bleu_score}\n")
+text_file2.close()
