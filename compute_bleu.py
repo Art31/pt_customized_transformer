@@ -18,7 +18,7 @@ def compute_corpus_level_bleu_scoreresult_list(references: List[List[str]], hypo
     return bleu_score
 
 
-def translate_sententeces(text_list, output)
+def translate_sententeces(text_list, output):
     """Translates text into the target language.
 
     Target must be an ISO 639-1 language code.
