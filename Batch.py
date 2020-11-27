@@ -31,7 +31,7 @@ def create_masks(src, trg, opt):
 # patch on Torchtext's batching process that makes it more efficient
 # from http://nlp.seas.harvard.edu/2018/04/03/attention.html#position-wise-feed-forward-networks
 
-class MyIterator(data.Iterator):
+class MyIterator(data.Iterator): # https://torchtext.readthedocs.io/en/latest/data.html#iterator
     def create_batches(self):
         if self.train:
             def pool(d, random_shuffler):

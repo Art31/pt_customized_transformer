@@ -71,7 +71,7 @@ def create_dataset(opt, SRC, TRG):
     raw_data = {'src' : [line for line in opt.src_data], 'trg': [line for line in opt.trg_data]}
     df = pd.DataFrame(raw_data, columns=["src", "trg"])
     
-    mask = (df['src'].str.count(' ') < opt.max_strlen) & (df['trg'].str.count(' ') < opt.max_strlen)
+    mask = (df['src'].str.count(' ') < opt.max_strlen) & (df['trg'].str.count(' ') < opt.max_strlen) # filtering senteces with more words than max_strlen
     df = df.loc[mask]
 
     df.to_csv("translate_transformer_temp.csv", index=False)
@@ -97,8 +97,8 @@ def create_dataset(opt, SRC, TRG):
             pickle.dump(SRC, open('weights/SRC.pkl', 'wb'))
             pickle.dump(TRG, open('weights/TRG.pkl', 'wb'))
 
-    opt.src_pad = SRC.vocab.stoi['<pad>']
-    opt.trg_pad = TRG.vocab.stoi['<pad>']
+    opt.src_pad = SRC.vocab.stoi['<pad>'] # get number of pad token, used for masking 
+    opt.trg_pad = TRG.vocab.stoi['<pad>'] # Pad the text so that all the sequences are the same length, so you can process them in batch
 
     opt.train_len = get_len(train_iter)
 
