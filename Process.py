@@ -71,7 +71,7 @@ def create_dataset(opt, SRC, TRG):
     raw_data = {'src' : [line for line in opt.src_data], 'trg': [line for line in opt.trg_data]}
     df = pd.DataFrame(raw_data, columns=["src", "trg"])
     
-    mask = (df['src'].str.count(' ') < opt.max_strlen) & (df['trg'].str.count(' ') < opt.max_strlen)
+    mask = (df['src'].str.count(' ') < opt.max_strlen) & (df['trg'].str.count(' ') < opt.max_strlen) # filtering senteces with more words than max_strlen
     df = df.loc[mask]
 
     df.to_csv("translate_transformer_temp.csv", index=False)
@@ -79,11 +79,16 @@ def create_dataset(opt, SRC, TRG):
     data_fields = [('src', SRC), ('trg', TRG)]
     train = data.TabularDataset('./translate_transformer_temp.csv', format='csv', fields=data_fields)
 
-    train_iter = MyIterator(train, batch_size=opt.batchsize, device=opt.device,
+    if opt.naive_model_type == 0:
+        train_iter = MyIterator(train, batch_size=opt.batchsize, device=opt.device,
                         repeat=False, sort_key=lambda x: (len(x.src), len(x.trg)),
-                        batch_size_fn=batch_size_fn, train=True, shuffle=True)
-    
-    os.remove('translate_transformer_temp.csv')
+                        batch_size_fn=batch_size_fn, train=True, shuffle=True) # batch_size_fn = dynamic batching
+    elif opt.naive_model_type == 1:
+        train_iter = MyIterator(train, batch_size=opt.batchsize, device=opt.device,
+                        repeat=False, sort_key=lambda x: (len(x.src), len(x.trg)),
+                        train=True, shuffle=True)
+
+    # os.remove('translate_transformer_temp.csv')
 
     if opt.load_weights is None:
         SRC.build_vocab(train)
@@ -97,8 +102,10 @@ def create_dataset(opt, SRC, TRG):
             pickle.dump(SRC, open('weights/SRC.pkl', 'wb'))
             pickle.dump(TRG, open('weights/TRG.pkl', 'wb'))
 
-    opt.src_pad = SRC.vocab.stoi['<pad>']
-    opt.trg_pad = TRG.vocab.stoi['<pad>']
+    opt.src_pad = SRC.vocab.stoi['<pad>'] # get number of pad token, used for masking 
+    opt.trg_pad = TRG.vocab.stoi['<pad>'] # Pad the text so that all the sequences are the same length, so you can process them in batch
+    # opt.src_sos = 
+    opt.trg_sos = TRG.vocab.stoi['<sos>']
 
     opt.train_len = get_len(train_iter)
 
