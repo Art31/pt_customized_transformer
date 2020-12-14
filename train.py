@@ -8,7 +8,7 @@ from Optim import CosineWithRestarts
 from Batch import create_masks
 import dill as pickle
 
-def train_model(model, opt):
+def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
     
     print("training model...")
     model.train()
@@ -34,18 +34,18 @@ def train_model(model, opt):
             if opt.naive_model_type == 0:
                 src_mask, trg_mask = create_masks(src, trg_input, opt)
                 preds = model(src, trg_input, src_mask, trg_mask)
-                ys = trg[:, 1:].contiguous().view(-1)
-                opt.optimizer.zero_grad()
-                loss = F.cross_entropy(preds.view(-1, preds.size(-1)), ys, ignore_index=opt.trg_pad)
-                loss.backward()
-                opt.optimizer.step()
-                if opt.SGDR == True: 
-                    opt.sched.step()
-                
-                total_loss += loss.item()
             else:
                 preds = model(src, trg_input)
                 ### construir equivalente ###
+            ys = trg[:, 1:].contiguous().view(-1)
+            opt.optimizer.zero_grad()
+            loss = F.cross_entropy(preds.view(-1, preds.size(-1)), ys, ignore_index=opt.trg_pad)
+            loss.backward()
+            opt.optimizer.step()
+            if opt.SGDR == True: 
+                opt.sched.step()
+            
+            total_loss += loss.item()
             
             if (i + 1) % opt.printevery == 0:
                  p = int(100 * (i + 1) / opt.train_len)
@@ -123,7 +123,7 @@ def main():
             self.floyd = False 
             self.checkpoint = 0
             self.decoder_extra_layers = 0
-            self.naive_model_type = 0 # default 0
+            self.naive_model_type = 1 # default 0
     opt = InputArgs()
     print(opt.__dict__)
 

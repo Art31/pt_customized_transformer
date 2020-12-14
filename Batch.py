@@ -51,7 +51,7 @@ class MyIterator(data.Iterator): # https://torchtext.readthedocs.io/en/latest/da
 
 global max_src_in_batch, max_tgt_in_batch
 
-def batch_size_fn(new, count, sofar):
+def batch_size_fn(new, count, sofar): # dynamic batching
     "Keep augmenting batch and calculate total number of tokens + padding."
     global max_src_in_batch, max_tgt_in_batch
     if count == 1:
