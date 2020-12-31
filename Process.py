@@ -106,16 +106,16 @@ def create_dataset(opt, SRC, TRG, word_emb):
     data_fields = [('src', SRC), ('trg', TRG)]
     train = data.TabularDataset('./translate_transformer_temp.csv', format='csv', fields=data_fields)
 
-    # if opt.naive_model_type == 'transformer':
-    #     train_iter = MyIterator(train, batch_size=opt.batchsize, device=opt.device,
-    #                     repeat=False, sort_key=lambda x: (len(x.src), len(x.trg)),
-    #                     batch_size_fn=batch_size_fn, train=True, shuffle=True) # batch_size_fn = dynamic batching
-    # elif opt.naive_model_type == 'rnn_naive_model':
-    train_iter = MyIterator(train, batch_size=opt.batchsize, device=opt.device,
-                    repeat=False, sort_key=lambda x: (len(x.src), len(x.trg)),
-                    train=True, shuffle=True)
+    if opt.use_dynamic_batch == True:
+        train_iter = MyIterator(train, batch_size=opt.batchsize, device=opt.device,
+                        repeat=False, sort_key=lambda x: (len(x.src), len(x.trg)),
+                        batch_size_fn=batch_size_fn, train=True, shuffle=True) # batch_size_fn = dynamic batching
+    else:
+        train_iter = MyIterator(train, batch_size=opt.batchsize, device=opt.device,
+                        repeat=False, sort_key=lambda x: (len(x.src), len(x.trg)),
+                        train=True, shuffle=True)
 
-    # os.remove('translate_transformer_temp.csv')
+    os.remove('translate_transformer_temp.csv')
 
     if opt.load_weights is None:
         SRC.build_vocab(train)

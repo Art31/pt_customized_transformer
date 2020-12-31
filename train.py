@@ -104,6 +104,7 @@ def main():
     parser.add_argument('-decoder_extra_layers', type=int, default=0)
     parser.add_argument('-naive_model_type', type=str, default='transformer')
     parser.add_argument('-word_embedding_type', type=str, default=0)
+    parser.add_argument('-use_dynamic_batch', action='store_true')
 
     # class InputArgs():
     #     def __init__(self):
@@ -129,11 +130,12 @@ def main():
     #         self.decoder_extra_layers = 0
     #         self.naive_model_type = 'rnn_naive_model' # 'transformer', 'rnn_naive_model', 'allign_and_translate' ...
     #         self.word_embedding_type = None # None, 'glove' or 'fast_text'
+    #         self.use_dynamic_batch = None
     # opt = InputArgs()
     # print(opt.__dict__)
 
-    # opt = parser.parse_args()
-    # print(opt)
+    opt = parser.parse_args()
+    print(opt)
 
     # opt.device = 0 if opt.no_cuda is False else torch.device("cpu")
     if opt.no_cuda is False:
