@@ -35,12 +35,12 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
                 trg_input = trg[:, :-1]
                 src_mask, trg_mask = create_masks(src, trg_input, opt)
                 preds = model(src, trg_input, src_mask, trg_mask) # -> [batch_size, sent_len, emb_dim]
+                ys = trg[:, 1:].contiguous().view(-1) # [batch_size * sent_len]
             else:
                 src = batch.src
                 trg = batch.trg
                 preds = model(src, trg)
-                ### construir equivalente ###
-            ys = trg[:, 1:].contiguous().view(-1) # [batch_size * sent_len]
+                ys = trg.contiguous().view(-1)
             opt.optimizer.zero_grad()
             loss = F.cross_entropy(preds.view(-1, preds.size(-1)), ys, ignore_index=opt.trg_pad)
             loss.backward()

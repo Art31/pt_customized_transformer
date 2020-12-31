@@ -70,7 +70,7 @@ class EncoderRNN(nn.Module):
         else:
             word_embeddings = torch.FloatTensor(field.vocab.vectors)
             self.embedding = nn.Embedding.from_pretrained(word_embeddings) # https://stackoverflow.com/questions/49710537/pytorch-gensim-how-to-load-pre-trained-word-embeddings
-        self.rnn = nn.RNN(d_model, d_model)
+        self.rnn = nn.GRU(d_model, d_model)
 
     # def forward(self, input, hidden): # no initialization for hidden layer in first paper
     def forward(self, input):
@@ -101,7 +101,7 @@ class DecoderRNN(nn.Module):
         else:
             word_embeddings = torch.FloatTensor(field.vocab.vectors)
             self.embedding = nn.Embedding.from_pretrained(word_embeddings) # https://stackoverflow.com/questions/49710537/pytorch-gensim-how-to-load-pre-trained-word-embeddings
-        self.rnn = nn.RNN(d_model + d_model, d_model)
+        self.rnn = nn.GRU(d_model + d_model, d_model)
         self.fc_out = nn.Linear(d_model + d_model * 2, output_size)
         # self.softmax = nn.LogSoftmax(dim=1)
 
@@ -194,7 +194,7 @@ class NaiveModel(nn.Module):
         outputs = torch.zeros(trg_len, batch_size, trg_vocab_size).to(self.device)
         
         #last hidden state of the encoder is the context
-        context = self.encoder(src)
+        context = self.encoder(src) # [sent_len, batch_size] -> [1, batch_size, d_model]
         
         #context also used as the initial hidden state of the decoder
         hidden = context

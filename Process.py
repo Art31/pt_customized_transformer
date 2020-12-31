@@ -22,7 +22,7 @@ def embedding_to_torchtext_vocab_translator(field, model):
     embedding_vectors = []
     for token, idx in tqdm(field.vocab.stoi.items()):
         if token in model.wv.vocab.keys():
-            embedding_vectors.append(torch.FloatTensor(model[token]))
+            embedding_vectors.append(torch.FloatTensor(model[token].copy()))
         else:
             random_vector = nn.Embedding(1, model.vector_size)(torch.LongTensor([0]))
             embedding_vectors.append(random_vector)
