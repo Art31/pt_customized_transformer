@@ -4,10 +4,14 @@ import math
 from torch.autograd import Variable
 
 class Embedder(nn.Module):
-    def __init__(self, vocab_size, d_model):
+    def __init__(self, vocab_size, d_model, word_emb, field):
         super().__init__()
         self.d_model = d_model
-        self.embed = nn.Embedding(vocab_size, d_model)
+        if word_emb is None:
+            self.embed = nn.Embedding(vocab_size, d_model)
+        else:
+            word_embeddings = torch.FloatTensor(field.vocab.vectors)
+            self.embed = nn.Embedding.from_pretrained(word_embeddings) # https://stackoverflow.com/questions/49710537/pytorch-gensim-how-to-load-pre-trained-word-embeddings
     def forward(self, x):
         return self.embed(x)
 

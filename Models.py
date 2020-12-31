@@ -3,8 +3,9 @@ import torch.nn as nn
 from Layers import EncoderLayer, DecoderLayer
 from Embed import Embedder, PositionalEncoder
 from Sublayers import Norm
+from gensim.models import KeyedVectors
 import torch.nn.functional as F
-import copy
+import copy, time, math
 
 def get_clones(module, N, decoder_extra_layers=None):
     if decoder_extra_layers is None:
@@ -13,10 +14,11 @@ def get_clones(module, N, decoder_extra_layers=None):
         return nn.ModuleList([copy.deepcopy(module) for i in range(N+decoder_extra_layers)])
 
 class Encoder(nn.Module):
-    def __init__(self, vocab_size, d_model, N, heads, dropout):
+    def __init__(self, vocab_size, d_model, N, heads, dropout, field, word_emb, opt):
         super().__init__()
         self.N = N
-        self.embed = Embedder(vocab_size, d_model)
+        self.word_emb = word_emb; self.opt = opt # unused, just for querying
+        self.embed = Embedder(vocab_size, d_model, word_emb, field)
         self.pe = PositionalEncoder(d_model, dropout=dropout)
         self.layers = get_clones(EncoderLayer(d_model, heads, dropout), N) # attention
         self.norm = Norm(d_model)
@@ -28,10 +30,11 @@ class Encoder(nn.Module):
         return self.norm(x)
     
 class Decoder(nn.Module):
-    def __init__(self, vocab_size, d_model, N, heads, dropout, decoder_extra_layers):
+    def __init__(self, vocab_size, d_model, N, heads, dropout, decoder_extra_layers, field, word_emb, opt):
         super().__init__()
         self.N = N
-        self.embed = Embedder(vocab_size, d_model)
+        self.opt = opt; self.word_emb = word_emb # unused, just for querying
+        self.embed = Embedder(vocab_size, d_model, word_emb, field)
         self.pe = PositionalEncoder(d_model, dropout=dropout)
         self.layers = get_clones(DecoderLayer(d_model, heads, decoder_extra_layers, dropout), N, decoder_extra_layers)
         self.norm = Norm(d_model)
@@ -43,26 +46,30 @@ class Decoder(nn.Module):
         return self.norm(x)
 
 class Transformer(nn.Module):
-    def __init__(self, src_vocab, trg_vocab, d_model, N, heads, dropout, decoder_extra_layers):
+    def __init__(self, src_vocab, trg_vocab, d_model, N, heads, dropout, decoder_extra_layers, fields, word_emb, opt):
         super().__init__()
-        self.encoder = Encoder(src_vocab, d_model, N, heads, dropout)
-        self.decoder = Decoder(trg_vocab, d_model, N, heads, dropout, decoder_extra_layers)
+        self.encoder = Encoder(src_vocab, d_model, N, heads, dropout, fields['SRC'], word_emb, opt)
+        self.decoder = Decoder(trg_vocab, d_model, N, heads, dropout, decoder_extra_layers, fields['TRG'], word_emb, opt)
         self.out = nn.Linear(d_model, trg_vocab)
     def forward(self, src, trg, src_mask, trg_mask):
         e_outputs = self.encoder(src, src_mask) # [128, 5], [128, 1, 5] -> [128, 5, 512]
-        #print("DECODER")
         d_output = self.decoder(trg, e_outputs, src_mask, trg_mask) # [128, 7], [128, 5, 512], [128, 1, 5], [128, 7, 7] -> [128, 7, 512]
+        # d_output = self.decoder(trg, torch.randn(e_outputs.shape), torch.randn(src_mask.shape), trg_mask) # [128, 7], [128, 5, 512], [128, 1, 5], [128, 7, 7] -> [128, 7, 512]
         output = self.out(d_output) # [128, 7, 512] -> [128, 7, 11441])
         return output
 
 class EncoderRNN(nn.Module):
-    def __init__(self, input_size, d_model): # emb_dim = hid_dim = d_model
+    def __init__(self, input_size, d_model, field, word_emb_model, opt): # emb_dim = hid_dim = d_model
         # positional encoding is unnecessary for RNNs!
         super(EncoderRNN, self).__init__()
         # self.device = device
         self.d_model = d_model
 
-        self.embedding = nn.Embedding(input_size, d_model)
+        if opt.word_embedding_type is None:
+            self.embedding = nn.Embedding(input_size, d_model)
+        else:
+            word_embeddings = torch.FloatTensor(field.vocab.vectors)
+            self.embedding = nn.Embedding.from_pretrained(word_embeddings) # https://stackoverflow.com/questions/49710537/pytorch-gensim-how-to-load-pre-trained-word-embeddings
         self.rnn = nn.RNN(d_model, d_model)
 
     # def forward(self, input, hidden): # no initialization for hidden layer in first paper
@@ -82,16 +89,20 @@ class EncoderRNN(nn.Module):
     #     return torch.zeros(1, 1, self.d_model, device=self.device)
 
 class DecoderRNN(nn.Module):
-    def __init__(self, output_size, d_model): # emb_dim = hid_dim = d_model
+    def __init__(self, d_model, output_size, field, word_emb_model, opt): # emb_dim = hid_dim = d_model
         # positional encoding is unnecessary for RNNs!
         super(DecoderRNN, self).__init__()
         # self.device = device
         self.output_size = output_size
         self.d_model = d_model
 
-        self.embedding = nn.Embedding(output_size, d_model)
+        if opt.word_embedding_type is None:
+            self.embedding = nn.Embedding(output_size, d_model)
+        else:
+            word_embeddings = torch.FloatTensor(field.vocab.vectors)
+            self.embedding = nn.Embedding.from_pretrained(word_embeddings) # https://stackoverflow.com/questions/49710537/pytorch-gensim-how-to-load-pre-trained-word-embeddings
         self.rnn = nn.RNN(d_model + d_model, d_model)
-        self.out = nn.Linear(d_model + d_model * 2, output_size)
+        self.fc_out = nn.Linear(d_model + d_model * 2, output_size)
         # self.softmax = nn.LogSoftmax(dim=1)
 
     # def forward(self, input, hidden): # context vector is passed in first paper
@@ -249,23 +260,24 @@ class NaiveModel(nn.Module):
 #     def initHidden(self):
 #         return torch.zeros(1, 1, self.hidden_size, device=device)
 
-def get_model(opt, src_vocab, trg_vocab):
+def get_model(opt, src_vocab, trg_vocab, word_emb):
     
     assert opt.d_model % opt.heads == 0
     assert opt.dropout < 1
 
-    if opt.naive_model_type == 0:
-        model = Transformer(src_vocab, trg_vocab, opt.d_model, opt.n_layers, opt.heads, opt.dropout, opt.decoder_extra_layers)
-    elif opt.naive_model_type == 1: 
-        encoder = EncoderRNN(src_vocab, opt.d_model)
-        decoder = DecoderRNN(opt.d_model, trg_vocab)
+    if opt.naive_model_type == 'transformer':
+        fields = {'SRC': opt.SRC, 'TRG': opt.TRG}
+        model = Transformer(src_vocab, trg_vocab, opt.d_model, opt.n_layers, opt.heads, opt.dropout, opt.decoder_extra_layers, fields, word_emb, opt)
+    elif opt.naive_model_type == 'rnn_naive_model': 
+        encoder = EncoderRNN(src_vocab, opt.d_model, opt.SRC, word_emb, opt)
+        decoder = DecoderRNN(opt.d_model, trg_vocab, opt.TRG, word_emb, opt)
         model = NaiveModel(encoder, decoder, opt.device) # (opt.d_model, opt.dropout, opt.device, opt.max_strlen)
 
     if opt.load_weights is not None:
         print("loading pretrained weights...")
         # model = nn.DataParallel(model)
         model.load_state_dict(torch.load(f'{opt.load_weights}/model_weights'))
-    else:
+    elif opt.word_embedding_type is None:
         for p in model.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p) 

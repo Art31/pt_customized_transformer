@@ -1,11 +1,11 @@
-import argparse
-import time
+import argparse, time
 import torch
 from Models import get_model
 from Process import *
 import torch.nn.functional as F
 from Optim import CosineWithRestarts
 from Batch import create_masks
+from gensim.models import KeyedVectors
 import dill as pickle
 
 def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
@@ -28,16 +28,19 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
                     
         for i, batch in enumerate(opt.train): # opt.train = MyIterator
 
-            src = batch.src.transpose(0,1)
-            trg = batch.trg.transpose(0,1)
-            trg_input = trg[:, :-1]
-            if opt.naive_model_type == 0:
+            # [opt.SRC.vocab.itos[i] for i in batch.src[:, 0]] # to query batch words from field
+            if opt.naive_model_type == 'transformer':
+                src = batch.src.transpose(0,1)
+                trg = batch.trg.transpose(0,1)
+                trg_input = trg[:, :-1]
                 src_mask, trg_mask = create_masks(src, trg_input, opt)
-                preds = model(src, trg_input, src_mask, trg_mask)
+                preds = model(src, trg_input, src_mask, trg_mask) # -> [batch_size, sent_len, emb_dim]
             else:
-                preds = model(src, trg_input)
+                src = batch.src
+                trg = batch.trg
+                preds = model(src, trg)
                 ### construir equivalente ###
-            ys = trg[:, 1:].contiguous().view(-1)
+            ys = trg[:, 1:].contiguous().view(-1) # [batch_size * sent_len]
             opt.optimizer.zero_grad()
             loss = F.cross_entropy(preds.view(-1, preds.size(-1)), ys, ignore_index=opt.trg_pad)
             loss.backward()
@@ -78,54 +81,56 @@ def main():
     #     lrate = (1/np.sqrt(512)) * min(1/np.sqrt(step), step*4000**-1.5 )
     #     print(f'{step}: lrate {lrate}')
 
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('-src_data', required=True)
-    # parser.add_argument('-trg_data', required=True)
-    # parser.add_argument('-src_lang', required=True)
-    # parser.add_argument('-trg_lang', required=True)
-    # parser.add_argument('-no_cuda', action='store_true')
-    # parser.add_argument('-SGDR', action='store_true')
-    # parser.add_argument('-epochs', type=int, default=2)
-    # parser.add_argument('-d_model', type=int, default=512) # hidden size for models using RNN
-    # parser.add_argument('-n_layers', type=int, default=6)
-    # parser.add_argument('-heads', type=int, default=8)
-    # parser.add_argument('-dropout', type=float, default=0.1)
-    # parser.add_argument('-batchsize', type=int, default=1500)
-    # parser.add_argument('-printevery', type=int, default=100)
-    # parser.add_argument('-lr', type=float, default=0.00015)
-    # parser.add_argument('-load_weights')
-    # parser.add_argument('-create_valset', action='store_true')
-    # parser.add_argument('-max_strlen', type=int, default=100) # max number of spaces per sentence
-    # parser.add_argument('-floyd', action='store_true')
-    # parser.add_argument('-checkpoint', type=int, default=0)
-    # parser.add_argument('-decoder_extra_layers', type=int, default=0)
-    # parser.add_argument('-naive_model_type', type=int, default=0)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-src_data', required=True)
+    parser.add_argument('-trg_data', required=True)
+    parser.add_argument('-src_lang', required=True)
+    parser.add_argument('-trg_lang', required=True)
+    parser.add_argument('-no_cuda', action='store_true')
+    parser.add_argument('-SGDR', action='store_true')
+    parser.add_argument('-epochs', type=int, default=2)
+    parser.add_argument('-d_model', type=int, default=512) # hidden size for models using RNN
+    parser.add_argument('-n_layers', type=int, default=6)
+    parser.add_argument('-heads', type=int, default=8)
+    parser.add_argument('-dropout', type=float, default=0.1)
+    parser.add_argument('-batchsize', type=int, default=1500)
+    parser.add_argument('-printevery', type=int, default=100)
+    parser.add_argument('-lr', type=float, default=0.00015)
+    parser.add_argument('-load_weights')
+    parser.add_argument('-create_valset', action='store_true')
+    parser.add_argument('-max_strlen', type=int, default=100) # max number of spaces per sentence
+    parser.add_argument('-floyd', action='store_true')
+    parser.add_argument('-checkpoint', type=int, default=0)
+    parser.add_argument('-decoder_extra_layers', type=int, default=0)
+    parser.add_argument('-naive_model_type', type=str, default='transformer')
+    parser.add_argument('-word_embedding_type', type=str, default=0)
 
-    class InputArgs():
-        def __init__(self):
-            self.src_data = 'data/port_train.txt'
-            self.trg_data = 'data/eng_train.txt'
-            self.src_lang = 'pt'
-            self.trg_lang = 'en'
-            self.no_cuda = True
-            self.SGDR = False
-            self.epochs = 5 
-            self.d_model = 512 
-            self.n_layers = 6
-            self.heads = 8
-            self.dropout = 0.1
-            self.batchsize = 1024
-            self.printevery = 100
-            self.lr = 0.00015
-            self.load_weights = None 
-            self.create_valset = False 
-            self.max_strlen = 100 
-            self.floyd = False 
-            self.checkpoint = 0
-            self.decoder_extra_layers = 0
-            self.naive_model_type = 1 # default 0
-    opt = InputArgs()
-    print(opt.__dict__)
+    # class InputArgs():
+    #     def __init__(self):
+    #         self.src_data = 'data/port_train.txt'
+    #         self.trg_data = 'data/eng_train.txt'
+    #         self.src_lang = 'pt'
+    #         self.trg_lang = 'en'
+    #         self.no_cuda = True
+    #         self.SGDR = False
+    #         self.epochs = 5 
+    #         self.d_model = 300 
+    #         self.n_layers = 6
+    #         self.heads = 6
+    #         self.dropout = 0.1
+    #         self.batchsize = 1024
+    #         self.printevery = 100
+    #         self.lr = 0.00015
+    #         self.load_weights = None 
+    #         self.create_valset = False 
+    #         self.max_strlen = 100 
+    #         self.floyd = False 
+    #         self.checkpoint = 0
+    #         self.decoder_extra_layers = 0
+    #         self.naive_model_type = 'rnn_naive_model' # 'transformer', 'rnn_naive_model', 'allign_and_translate' ...
+    #         self.word_embedding_type = None # None, 'glove' or 'fast_text'
+    # opt = InputArgs()
+    # print(opt.__dict__)
 
     # opt = parser.parse_args()
     # print(opt)
@@ -136,12 +141,26 @@ def main():
         opt.device = torch.device("cuda")
     else:
         opt.device = torch.device("cpu")
+
+    i_t = time.time()
+    if opt.word_embedding_type is None:
+        word_emb = opt.word_embedding_type
+    else:
+        if opt.word_embedding_type == 'glove':
+            word_emb = KeyedVectors.load_word2vec_format('word_embeddings/glove_s300.txt')
+        elif opt.word_embedding_type == 'fast_text':
+            word_emb = KeyedVectors.load_word2vec_format('word_embeddings/ftext_skip_s300.txt')
+        now = time.time()
+        minutes = math.floor((now - i_t)/60)
+        print(f'\nWord embeddding of type {str(opt.word_embedding_type)} took {minutes} minutes \
+            and {now - i_t - minutes*60:.2f} seconds to load.\n')
     
-    # import ipdb; ipdb.set_trace()
     read_data(opt)
     SRC, TRG = create_fields(opt)
-    opt.train = create_dataset(opt, SRC, TRG)
-    model = get_model(opt, len(SRC.vocab), len(TRG.vocab))
+    opt.train, SRC, TRG = create_dataset(opt, SRC, TRG, word_emb)
+    opt.SRC = SRC; opt.TRG = TRG # important, these are used to input embeddings
+    opt.word_emb = word_emb # just for querying vocabulary
+    model = get_model(opt, len(SRC.vocab), len(TRG.vocab), word_emb)
 
     opt.optimizer = torch.optim.Adam(model.parameters(), lr=opt.lr, betas=(0.9, 0.98), eps=1e-9)
     if opt.SGDR == True:

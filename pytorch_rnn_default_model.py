@@ -258,7 +258,7 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
     encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
     decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
     training_pairs = [tensorsFromPair(random.choice(pairs))
-                      for i in range(n_iters)]
+                      for i in range(n_iters)] # returns indexes of words in each lang as tensors
     criterion = nn.NLLLoss()
 
     for iter in range(1, n_iters + 1):
