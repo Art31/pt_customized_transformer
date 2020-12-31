@@ -103,7 +103,7 @@ def main():
     parser.add_argument('-checkpoint', type=int, default=0)
     parser.add_argument('-decoder_extra_layers', type=int, default=0)
     parser.add_argument('-naive_model_type', type=str, default='transformer')
-    parser.add_argument('-word_embedding_type', type=str, default=0)
+    parser.add_argument('-word_embedding_type', type=str, default=None)
     parser.add_argument('-use_dynamic_batch', action='store_true')
 
     # class InputArgs():
@@ -145,9 +145,7 @@ def main():
         opt.device = torch.device("cpu")
 
     i_t = time.time()
-    if opt.word_embedding_type is None:
-        word_emb = opt.word_embedding_type
-    else:
+    if opt.word_embedding_type in ['glove', 'fast_text']:
         if opt.word_embedding_type == 'glove':
             word_emb = KeyedVectors.load_word2vec_format('word_embeddings/glove_s300.txt')
         elif opt.word_embedding_type == 'fast_text':
@@ -156,6 +154,8 @@ def main():
         minutes = math.floor((now - i_t)/60)
         print(f'\nWord embeddding of type {str(opt.word_embedding_type)} took {minutes} minutes \
             and {now - i_t - minutes*60:.2f} seconds to load.\n')
+    elif opt.word_embedding_type is None:
+        word_emb = opt.word_embedding_type
     
     read_data(opt)
     SRC, TRG = create_fields(opt)
