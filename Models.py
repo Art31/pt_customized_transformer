@@ -76,7 +76,7 @@ class EncoderRNN(nn.Module):
             self.rnn = nn.GRU(d_model, d_model)
         elif opt.nmt_model_type == 'allign_and_translate':
             self.rnn = nn.GRU(d_model, d_model, bidirectional = True)
-            self.fc = nn.Linear(enc_hid_dim * 2, dec_hid_dim)
+            self.fc = nn.Linear(d_model * 2, d_model)
 
     # def forward(self, input, hidden): # no initialization for hidden layer in first paper
     def forward(self, input):
@@ -87,7 +87,7 @@ class EncoderRNN(nn.Module):
         #embedded = [input_len, batch_size, d_model]
         output = embedded
         # output, hidden = self.rnn(output, hidden) # no initialization for hidden layer in first paper
-        output, hidden = self.rnn(output) #no cell state!
+        outputs, hidden = self.rnn(output) #no cell state!
         #outputs = [input_len, batch_size, d_model * n directions]
         #hidden = [n_layers * n directions, batch_size, d_model]
         # return output, hidden # return only context (hidden state) in first paper
@@ -364,7 +364,7 @@ def get_model(opt, src_vocab, trg_vocab, word_emb):
         decoder = DecoderRNN(opt.d_model, trg_vocab, opt.TRG, word_emb, opt)
         model = NaiveModel(encoder, decoder, opt) # (opt.d_model, opt.dropout, opt.device, opt.max_strlen)
     elif opt.nmt_model_type == 'allign_and_translate': 
-        attn = Attention(opt.d_model, opt.d_model, 32)
+        attn = Attention(opt.d_model, 32)
         encoder = EncoderRNN(src_vocab, opt.d_model, opt.SRC, word_emb, opt)
         decoder = DecoderRNN(opt.d_model, trg_vocab, opt.TRG, word_emb, opt, attention=attn)
         model = NaiveModel(encoder, decoder, opt) # (opt.d_model, opt.dropout, opt.device, opt.max_strlen)
