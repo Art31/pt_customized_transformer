@@ -31,7 +31,7 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
         for i, batch in tqdm(enumerate(opt.train)): # opt.train = MyIterator
 
             # [opt.SRC.vocab.itos[i] for i in batch.src[:, 0]] # to query batch words from field
-            if opt.naive_model_type == 'transformer':
+            if opt.nmt_model_type == 'transformer':
                 src = batch.src.transpose(0,1)
                 trg = batch.trg.transpose(0,1)
                 trg_input = trg[:, :-1]
@@ -104,7 +104,7 @@ def main():
     # parser.add_argument('-floyd', action='store_true')
     # parser.add_argument('-checkpoint', type=int, default=0)
     # parser.add_argument('-decoder_extra_layers', type=int, default=0)
-    # parser.add_argument('-naive_model_type', type=str, default='transformer')
+    # parser.add_argument('-nmt_model_type', type=str, default='transformer')
     # parser.add_argument('-word_embedding_type', type=str, default=None)
     # parser.add_argument('-use_dynamic_batch', action='store_true')
 
@@ -133,7 +133,7 @@ def main():
             self.floyd = False 
             self.checkpoint = 0
             self.decoder_extra_layers = 0
-            self.naive_model_type = 'rnn_naive_model' # 'transformer', 'rnn_naive_model', 'allign_and_translate' ...
+            self.nmt_model_type = 'rnn_naive_model' # 'transformer', 'rnn_naive_model', 'allign_and_translate' ...
             self.word_embedding_type = None # None, 'glove' or 'fast_text'
             self.use_dynamic_batch = None
     opt = InputArgs()
