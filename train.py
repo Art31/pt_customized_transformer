@@ -83,61 +83,61 @@ def main():
     #     lrate = (1/np.sqrt(512)) * min(1/np.sqrt(step), step*4000**-1.5 )
     #     print(f'{step}: lrate {lrate}')
 
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('-src_data', required=True)
-    # parser.add_argument('-trg_data', required=True)
-    # parser.add_argument('-src_lang', required=True)
-    # parser.add_argument('-trg_lang', required=True)
-    # parser.add_argument('-no_cuda', action='store_true')
-    # parser.add_argument('-SGDR', action='store_true')
-    # parser.add_argument('-epochs', type=int, default=2)
-    # parser.add_argument('-d_model', type=int, default=512) # hidden size for models using RNN
-    # parser.add_argument('-n_layers', type=int, default=6)
-    # parser.add_argument('-heads', type=int, default=8)
-    # parser.add_argument('-dropout', type=float, default=0.1)
-    # parser.add_argument('-batchsize', type=int, default=1500)
-    # parser.add_argument('-printevery', type=int, default=100)
-    # parser.add_argument('-lr', type=float, default=0.00015)
-    # parser.add_argument('-load_weights')
-    # parser.add_argument('-create_valset', action='store_true')
-    # parser.add_argument('-max_strlen', type=int, default=100) # max number of spaces per sentence
-    # parser.add_argument('-floyd', action='store_true')
-    # parser.add_argument('-checkpoint', type=int, default=0)
-    # parser.add_argument('-decoder_extra_layers', type=int, default=0)
-    # parser.add_argument('-nmt_model_type', type=str, default='transformer')
-    # parser.add_argument('-word_embedding_type', type=str, default=None)
-    # parser.add_argument('-use_dynamic_batch', action='store_true')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-src_data', required=True)
+    parser.add_argument('-trg_data', required=True)
+    parser.add_argument('-src_lang', required=True)
+    parser.add_argument('-trg_lang', required=True)
+    parser.add_argument('-no_cuda', action='store_true')
+    parser.add_argument('-SGDR', action='store_true')
+    parser.add_argument('-epochs', type=int, default=2)
+    parser.add_argument('-d_model', type=int, default=512) # hidden size for models using RNN
+    parser.add_argument('-n_layers', type=int, default=6)
+    parser.add_argument('-heads', type=int, default=8)
+    parser.add_argument('-dropout', type=float, default=0.1)
+    parser.add_argument('-batchsize', type=int, default=1500)
+    parser.add_argument('-printevery', type=int, default=100)
+    parser.add_argument('-lr', type=float, default=0.00015)
+    parser.add_argument('-load_weights')
+    parser.add_argument('-create_valset', action='store_true')
+    parser.add_argument('-max_strlen', type=int, default=100) # max number of spaces per sentence
+    parser.add_argument('-floyd', action='store_true')
+    parser.add_argument('-checkpoint', type=int, default=0)
+    parser.add_argument('-decoder_extra_layers', type=int, default=0)
+    parser.add_argument('-nmt_model_type', type=str, default='transformer')
+    parser.add_argument('-word_embedding_type', type=str, default=None)
+    parser.add_argument('-use_dynamic_batch', action='store_true')
 
-    # opt = parser.parse_args()
-    # print(opt)
+    opt = parser.parse_args()
+    print(opt)
 
-    class InputArgs():
-        def __init__(self):
-            self.src_data = 'data/port_train.txt'
-            self.trg_data = 'data/eng_train.txt'
-            self.src_lang = 'pt'
-            self.trg_lang = 'en'
-            self.no_cuda = True
-            self.SGDR = False
-            self.epochs = 5 
-            self.d_model = 300 
-            self.n_layers = 6
-            self.heads = 6
-            self.dropout = 0.1
-            self.batchsize = 1024
-            self.printevery = 100
-            self.lr = 0.00015
-            self.load_weights = None 
-            self.create_valset = False 
-            self.max_strlen = 100 
-            self.floyd = False 
-            self.checkpoint = 0
-            self.decoder_extra_layers = 0
-            self.nmt_model_type = 'rnn_naive_model' # 'transformer', 'rnn_naive_model', 'allign_and_translate' ...
-            self.word_embedding_type = None # None, 'glove' or 'fast_text'
-            self.use_dynamic_batch = None
-    opt = InputArgs()
-    print(opt.__dict__)
+    # class InputArgs():
+    #     def __init__(self):
+    #         self.src_data = 'data/port_train.txt'
+    #         self.trg_data = 'data/eng_train.txt'
+    #         self.src_lang = 'pt'
+    #         self.trg_lang = 'en'
+    #         self.no_cuda = True
+    #         self.SGDR = False
+    #         self.epochs = 5 
+    #         self.d_model = 300 
+    #         self.n_layers = 6
+    #         self.heads = 6
+    #         self.dropout = 0.1
+    #         self.batchsize = 1024
+    #         self.printevery = 100
+    #         self.lr = 0.00015
+    #         self.load_weights = None 
+    #         self.create_valset = False 
+    #         self.max_strlen = 100 
+    #         self.floyd = False 
+    #         self.checkpoint = 0
+    #         self.decoder_extra_layers = 0
+    #         self.nmt_model_type = 'rnn_naive_model' # 'transformer', 'rnn_naive_model', 'allign_and_translate' ...
+    #         self.word_embedding_type = None # None, 'glove' or 'fast_text'
+    #         self.use_dynamic_batch = None
+    # opt = InputArgs()
+    # print(opt.__dict__)
 
     # opt.device = 0 if opt.no_cuda is False else torch.device("cpu")
     if opt.no_cuda is False:
