@@ -50,6 +50,7 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
                 # ys = trg.contiguous().view(-1)
                 # -------------------- #
                 # NEW WAY
+                opt.optimizer.zero_grad()
                 output = model(src, trg)
                 output = output[1:].view(-1, output.shape[-1])
                 trg = trg[1:].view(-1)
