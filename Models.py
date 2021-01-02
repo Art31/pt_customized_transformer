@@ -5,6 +5,8 @@ from Embed import Embedder, PositionalEncoder
 from Sublayers import Norm
 from gensim.models import KeyedVectors
 import torch.nn.functional as F
+from torch import Tensor
+from typing import Tuple
 import copy, time, math
 
 def get_clones(module, N, decoder_extra_layers=None):
@@ -60,9 +62,8 @@ class Transformer(nn.Module):
 
 class EncoderRNN(nn.Module):
     def __init__(self, input_size, d_model, field, word_emb_model, opt): # emb_dim = hid_dim = d_model
-        # positional encoding is unnecessary for RNNs!
         super(EncoderRNN, self).__init__()
-        # self.device = device
+        self.opt = opt
         self.d_model = d_model
 
         if opt.word_embedding_type is None:
@@ -70,12 +71,19 @@ class EncoderRNN(nn.Module):
         else:
             word_embeddings = torch.FloatTensor(field.vocab.vectors)
             self.embedding = nn.Embedding.from_pretrained(word_embeddings) # https://stackoverflow.com/questions/49710537/pytorch-gensim-how-to-load-pre-trained-word-embeddings
-        self.rnn = nn.GRU(d_model, d_model)
+        
+        if opt.naive_model_type == 'rnn_naive_model':
+            self.rnn = nn.GRU(d_model, d_model)
+        elif opt.naive_model_type == 'allign_and_translate':
+            self.rnn = nn.GRU(d_model, d_model, bidirectional = True)
+            self.fc = nn.Linear(enc_hid_dim * 2, dec_hid_dim)
 
     # def forward(self, input, hidden): # no initialization for hidden layer in first paper
     def forward(self, input):
+        # OPTIONAL: USE DROPOUT ON INPUT
         #input = [input_len, batch_size]
         embedded = self.embedding(input)#.view(1, 1, -1)
+
         #embedded = [input_len, batch_size, d_model]
         output = embedded
         # output, hidden = self.rnn(output, hidden) # no initialization for hidden layer in first paper
@@ -83,16 +91,19 @@ class EncoderRNN(nn.Module):
         #outputs = [input_len, batch_size, d_model * n directions]
         #hidden = [n_layers * n directions, batch_size, d_model]
         # return output, hidden # return only context (hidden state) in first paper
-        return hidden 
+        if self.opt.naive_model_type == 'rnn_naive_model':
+            return hidden 
+        elif self.opt.naive_model_type == 'allign_and_translate':
+            hidden = torch.tanh(self.fc(torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = 1)))
+            return outputs, hidden
 
     # def initHidden(self):
     #     return torch.zeros(1, 1, self.d_model, device=self.device)
 
 class DecoderRNN(nn.Module):
-    def __init__(self, d_model, output_size, field, word_emb_model, opt): # emb_dim = hid_dim = d_model
-        # positional encoding is unnecessary for RNNs!
+    def __init__(self, d_model, output_size, field, word_emb_model, opt, attention=None): # emb_dim = hid_dim = d_model
         super(DecoderRNN, self).__init__()
-        # self.device = device
+        self.opt = opt
         self.output_size = output_size
         self.d_model = d_model
 
@@ -101,12 +112,49 @@ class DecoderRNN(nn.Module):
         else:
             word_embeddings = torch.FloatTensor(field.vocab.vectors)
             self.embedding = nn.Embedding.from_pretrained(word_embeddings) # https://stackoverflow.com/questions/49710537/pytorch-gensim-how-to-load-pre-trained-word-embeddings
-        self.rnn = nn.GRU(d_model + d_model, d_model)
-        self.fc_out = nn.Linear(d_model + d_model * 2, output_size)
-        # self.softmax = nn.LogSoftmax(dim=1)
+        
+        if self.opt.naive_model_type == 'rnn_naive_model':
+            self.rnn = nn.GRU(d_model + d_model, d_model)
+            self.fc_out = nn.Linear(d_model + d_model * 2, output_size)
+        elif self.opt.naive_model_type == 'allign_and_translate':
+            self.attention = attention
+            self.rnn = nn.GRU((d_model * 2) + d_model, d_model)
+            self.fc_out = nn.Linear(self.attention.attn_in + d_model, output_size)
+
+    def _weighted_encoder_rep(self, 
+                              decoder_hidden: Tensor,
+                              encoder_outputs: Tensor) -> Tensor:
+        
+        # Attention, at a high level, takes in:
+        # The decoder hidden state
+        # All the "seq_len" encoder outputs
+        # Outputs a vector summing to 1 of length seq_len for each observation
+        a = self.attention(decoder_hidden, encoder_outputs)
+
+        #a = [batch size, src len]
+
+        a = a.unsqueeze(1)
+
+        #a = [batch size, 1, src len]
+
+        encoder_outputs = encoder_outputs.permute(1, 0, 2)
+
+        #encoder_outputs = [batch size, src sent len, enc hid dim * 2]
+
+        weighted_encoder_rep = torch.bmm(a, encoder_outputs)
+
+        #weighted_encoder_rep = [batch size, 1, enc hid dim * 2]
+
+        weighted_encoder_rep = weighted_encoder_rep.permute(1, 0, 2)
+
+        #weighted_encoder_rep = [1, batch size, enc hid dim * 2]
+        
+        return weighted_encoder_rep
 
     # def forward(self, input, hidden): # context vector is passed in first paper
     def forward(self, input, hidden, context):
+        # OPTIONAL: USE DROPOUT ON INPUT
+
         # output = self.embedding(input).view(1, 1, -1) # original application
         # output = F.relu(output) # original application
         # # output, hidden = self.rnn(output, hidden) # original application
@@ -120,35 +168,39 @@ class DecoderRNN(nn.Module):
         #hidden = [1, batch_size, d_model]
         #context = [1, batch_size, d_model]
         input = input.unsqueeze(0)
-        #input = [1, batch_size]
         embedded = self.embedding(input)
-        #embedded = [1, batch_size, d_model]
-                
-        emb_con = torch.cat((embedded, context), dim = 2)
+        #input = [1, batch_size]
+        if self.opt.naive_model_type == 'rnn_naive_model':
+            #embedded = [1, batch_size, d_model]
+            #emb_con = [1, batch_size, d_model + d_model]
+            emb_con = torch.cat((embedded, context), dim = 2)
+            #output = [seq len, batch_size, d_model * n_directions]
+            #hidden = [n_layers * n_directions, batch_size, d_model]
+            output, hidden = self.rnn(emb_con, hidden)
+            #seq len, n layers and n directions will always be 1 in the decoder, therefore:
+            #output = [1, batch_size, d_model]
+            #hidden = [1, batch_size, d_model]
+            output = torch.cat((embedded.squeeze(0), hidden.squeeze(0), context.squeeze(0)), 
+                            dim = 1)
+            #output = [batch_size, d_model + d_model * 2]
+            prediction = self.fc_out(output)
+            #prediction = [batch_size, output dim]
+            return prediction, hidden
             
-        #emb_con = [1, batch_size, d_model + d_model]
+        elif self.opt.naive_model_type == 'allign_and_translate':
+            weighted_encoder_rep = self._weighted_encoder_rep(hidden, context)
+            emb_con = torch.cat((embedded, weighted_encoder_rep), dim = 2)
+            output, hidden = self.rnn(emb_con, hidden.unsqueeze(0))
+            assert (output == hidden).all()
+        
+            embedded = embedded.squeeze(0)
+            output = output.squeeze(0)
+            weighted_encoder_rep = weighted_encoder_rep.squeeze(0)
             
-        output, hidden = self.rnn(emb_con, hidden)
-
-        #output = [seq len, batch_size, d_model * n_directions]
-        #hidden = [n_layers * n_directions, batch_size, d_model]
-        
-        #seq len, n layers and n directions will always be 1 in the decoder, therefore:
-        #output = [1, batch_size, d_model]
-        #hidden = [1, batch_size, d_model]
-        
-        output = torch.cat((embedded.squeeze(0), hidden.squeeze(0), context.squeeze(0)), 
-                           dim = 1)
-        
-        #output = [batch_size, d_model + d_model * 2]
-        
-        prediction = self.fc_out(output)
-        
-        #prediction = [batch_size, output dim]
-        return prediction, hidden
-
-    # def initHidden(self):
-    #     return torch.zeros(1, 1, self.d_model, device=self.device)
+            output = self.fc_out(torch.cat((output, 
+                                        weighted_encoder_rep, 
+                                        embedded), dim = 1))
+            return output, hidden.squeeze(0)
 
 # usar https://github.com/bentrevett/pytorch-seq2seq/blob/master/2%20-%20Learning%20Phrase%20Representations%20using%20RNN%20Encoder-Decoder%20for%20Statistical%20Machine%20Translation.ipynb
 class NaiveModel(nn.Module):
@@ -157,11 +209,12 @@ class NaiveModel(nn.Module):
     # encoder1 = EncoderRNN(input_lang.n_words, hidden_size).to(device)
     # attn_decoder1 = AttnDecoderRNN(hidden_size, output_lang.n_words, dropout_p=0.1).to(device)
     # def __init__(self, src_vocab, trg_vocab, d_model, dropout, device, max_length):
-    def __init__(self, encoder, decoder, device):
+    def __init__(self, encoder, decoder, opt):
         super().__init__()
-        self.device = device
+        self.device = opt.device
         self.encoder = encoder
         self.decoder = decoder
+        self.opt = opt
     def forward(self, src, trg, teacher_forcing_ratio = 0.5):
         # encoder_hidden = self.encoder.initHidden()
         # input_length = src.size(0)
@@ -193,20 +246,25 @@ class NaiveModel(nn.Module):
         #tensor to store decoder outputs
         outputs = torch.zeros(trg_len, batch_size, trg_vocab_size).to(self.device)
         
-        #last hidden state of the encoder is the context
-        context = self.encoder(src) # [sent_len, batch_size] -> [1, batch_size, d_model]
-        
-        #context also used as the initial hidden state of the decoder
-        hidden = context
+        if self.opt.naive_model_type == 'rnn_naive_model':
+            #last hidden state of the encoder is the context
+            context = self.encoder(src) # [sent_len, batch_size] -> [1, batch_size, d_model]
+            #context also used as the initial hidden state of the decoder
+            hidden = context
+        elif self.opt.naive_model_type == 'allign_and_translate':
+            encoder_outputs, hidden = self.encoder(src)
         
         #first input to the decoder is the <sos> tokens
         input = trg[0,:]
         
         for t in range(1, trg_len):
             
-            #insert input token embedding, previous hidden state and the context state
-            #receive output tensor (predictions) and new hidden state
-            output, hidden = self.decoder(input, hidden, context)
+            if self.opt.naive_model_type == 'rnn_naive_model':
+                #insert input token embedding, previous hidden state and the context state
+                #receive output tensor (predictions) and new hidden state
+                output, hidden = self.decoder(input, hidden, context)
+            elif self.opt.naive_model_type == 'allign_and_translate':
+                output, hidden = self.decoder(input, hidden, encoder_outputs)
             
             #place predictions in a tensor holding predictions for each token
             outputs[t] = output
@@ -224,41 +282,74 @@ class NaiveModel(nn.Module):
         
         return outputs 
 
-# class AttnDecoderRNN(nn.Module):
-#     def __init__(self, hidden_size, output_size, dropout_p=0.1, max_length=MAX_LENGTH):
-#         super(AttnDecoderRNN, self).__init__()
-#         self.hidden_size = hidden_size
-#         self.output_size = output_size
-#         self.dropout_p = dropout_p
-#         self.max_length = max_length
+class Attention(nn.Module):
+    def __init__(self, 
+                 d_model: int, 
+                 attn_dim: int):
+        super().__init__()
+        
+        self.d_model = d_model
+        
+        self.attn_in = (d_model * 2) + d_model
+        
+        self.attn = nn.Linear(self.attn_in, attn_dim)
+        self.v = nn.Parameter(torch.rand(attn_dim))
+        
+    def forward(self, 
+                decoder_hidden: Tensor, 
+                encoder_outputs: Tensor) -> Tensor:
+        
+        #hidden = [batch size, dec hid dim]
+        #encoder_outputs = [src sent len, batch size, enc hid dim * 2]
+        
+        batch_size = encoder_outputs.shape[1]
+        src_len = encoder_outputs.shape[0]
+        
+        #repeat decoder hidden state src_len times
+        repeated_decoder_hidden = decoder_hidden.unsqueeze(1).repeat(1, src_len, 1)
+        
+        encoder_outputs = encoder_outputs.permute(1, 0, 2)
+        
+        #decoder_hidden = [batch size, src sent len, dec hid dim]
+        #encoder_outputs = [batch size, src sent len, enc hid dim * 2]
+        
+        # Step 1: to enable feeding through "self.attn" pink box above, concatenate 
+        # `repeated_decoder_hidden` and `encoder_outputs`:
+        # torch.cat((hidden, encoder_outputs), dim = 2) has shape 
+        # [batch_size, seq_len, enc_hid_dim * 2 + dec_hid_dim]
+        
+        # Step 2: feed through self.attn to end up with:
+        # [batch_size, seq_len, attn_dim]
+        
+        # Step 3: feed through tanh       
+        
+        energy = torch.tanh(self.attn(torch.cat((
+            repeated_decoder_hidden, 
+            encoder_outputs), 
+            dim = 2))) 
+        
+        #energy = [batch size, src sent len, attn_dim]
+        
+        energy = energy.permute(0, 2, 1)
+        
+        #energy = [batch size, attn_dim, src sent len]
+        
+        #v = [attn_dim]
+        
+        v = self.v.repeat(batch_size, 1).unsqueeze(1)
+        
+        #v = [batch size, 1, attn_dim]
+        
+        # High level: energy a function of both encoder element outputs and most recent decoder hidden state,
+        # of shape attn_dim x enc_seq_len for each observation
+        # v, being 1 x attn_dim, transforms this into a vector of shape 1 x enc_seq_len for each observation
+        # Then, we take the softmax over these to get the output of the attention function
 
-#         self.embedding = nn.Embedding(self.output_size, self.hidden_size)
-#         self.attn = nn.Linear(self.hidden_size * 2, self.max_length)
-#         self.attn_combine = nn.Linear(self.hidden_size * 2, self.hidden_size)
-#         self.dropout = nn.Dropout(self.dropout_p)
-#         self.gru = nn.GRU(self.hidden_size, self.hidden_size)
-#         self.out = nn.Linear(self.hidden_size, self.output_size)
-
-#     def forward(self, input, hidden, encoder_outputs):
-#         embedded = self.embedding(input).view(1, 1, -1)
-#         embedded = self.dropout(embedded)
-
-#         attn_weights = F.softmax(
-#             self.attn(torch.cat((embedded[0], hidden[0]), 1)), dim=1)
-#         attn_applied = torch.bmm(attn_weights.unsqueeze(0),
-#                                  encoder_outputs.unsqueeze(0))
-
-#         output = torch.cat((embedded[0], attn_applied[0]), 1)
-#         output = self.attn_combine(output).unsqueeze(0)
-
-#         output = F.relu(output)
-#         output, hidden = self.gru(output, hidden)
-
-#         output = F.log_softmax(self.out(output[0]), dim=1)
-#         return output, hidden, attn_weights
-
-#     def initHidden(self):
-#         return torch.zeros(1, 1, self.hidden_size, device=device)
+        attention = torch.bmm(v, energy).squeeze(1)
+        
+        #attention= [batch size, src len]
+        
+        return F.softmax(attention, dim=1)
 
 def get_model(opt, src_vocab, trg_vocab, word_emb):
     
@@ -271,7 +362,12 @@ def get_model(opt, src_vocab, trg_vocab, word_emb):
     elif opt.naive_model_type == 'rnn_naive_model': 
         encoder = EncoderRNN(src_vocab, opt.d_model, opt.SRC, word_emb, opt)
         decoder = DecoderRNN(opt.d_model, trg_vocab, opt.TRG, word_emb, opt)
-        model = NaiveModel(encoder, decoder, opt.device) # (opt.d_model, opt.dropout, opt.device, opt.max_strlen)
+        model = NaiveModel(encoder, decoder, opt) # (opt.d_model, opt.dropout, opt.device, opt.max_strlen)
+    elif opt.naive_model_type == 'allign_and_translate': 
+        attn = Attention(opt.d_model, opt.d_model, 32)
+        encoder = EncoderRNN(src_vocab, opt.d_model, opt.SRC, word_emb, opt)
+        decoder = DecoderRNN(opt.d_model, trg_vocab, opt.TRG, word_emb, opt, attention=attn)
+        model = NaiveModel(encoder, decoder, opt) # (opt.d_model, opt.dropout, opt.device, opt.max_strlen)
 
     if opt.load_weights is not None:
         print("loading pretrained weights...")
