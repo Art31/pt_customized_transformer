@@ -370,7 +370,7 @@ def get_model(opt, src_vocab, trg_vocab, word_emb):
         model = NaiveModel(encoder, decoder, opt) # (opt.d_model, opt.dropout, opt.device, opt.max_strlen)
 
     if opt.load_weights is not None:
-        print("loading pretrained weights...")
+        print(f"loading pretrained weights from {opt.load_weights}/model_weights...")
         # model = nn.DataParallel(model)
         model.load_state_dict(torch.load(f'{opt.load_weights}/model_weights'))
     elif opt.word_embedding_type is None:

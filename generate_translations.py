@@ -84,7 +84,9 @@ def main():
     parser.add_argument('-dropout', type=int, default=0.1)
     parser.add_argument('-no_cuda', action='store_true')
     parser.add_argument('-floyd', action='store_true')
+    parser.add_argument('-nmt_model_type', type=str, default='transformer')
     parser.add_argument('-decoder_extra_layers', type=int, default=0)
+    parser.add_argument('-word_embedding_type', type=str, default=None)
     
     opt = parser.parse_args()
 
@@ -93,8 +95,23 @@ def main():
     assert opt.k > 0
     assert opt.max_len > 10
 
+    i_t = time.time()
+    if opt.word_embedding_type in ['glove', 'fast_text']:
+        if opt.word_embedding_type == 'glove':
+            word_emb = KeyedVectors.load_word2vec_format('word_embeddings/glove_s300.txt')
+        elif opt.word_embedding_type == 'fast_text':
+            word_emb = KeyedVectors.load_word2vec_format('word_embeddings/ftext_skip_s300.txt')
+        now = time.time()
+        minutes = math.floor((now - i_t)/60)
+        print(f'\nWord embeddding of type {str(opt.word_embedding_type)} took {minutes} minutes \
+            and {now - i_t - minutes*60:.2f} seconds to load.\n')
+    elif opt.word_embedding_type is None:
+        word_emb = opt.word_embedding_type
+
     SRC, TRG = create_fields(opt)
-    model = get_model(opt, len(SRC.vocab), len(TRG.vocab))
+    opt.SRC = SRC; opt.TRG = TRG # important, these are used to input embeddings
+    opt.word_emb = word_emb # just for querying vocabulary
+    model = get_model(opt, len(SRC.vocab), len(TRG.vocab), word_emb)
     
     try:
         opt.text = open(opt.translate_file, encoding='utf-8').read().split('\n')
