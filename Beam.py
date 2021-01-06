@@ -7,17 +7,24 @@ import math
 def init_vars(src, model, SRC, TRG, opt):
     
     init_tok = TRG.vocab.stoi['<sos>']
-    src_mask = (src != SRC.vocab.stoi['<pad>']).unsqueeze(-2)
-    e_output = model.encoder(src, src_mask)
+    if opt.nmt_model_type == 'transformer':
+        src_mask = (src != SRC.vocab.stoi['<pad>']).unsqueeze(-2)
+        e_output = model.encoder(src, src_mask)
+    else:
+        e_output = model.encoder(src)
     
     outputs = torch.LongTensor([[init_tok]])
     if opt.no_cuda is False:
         outputs = outputs.cuda()
     
-    trg_mask = nopeak_mask(1, opt)
     
-    out = model.out(model.decoder(outputs,
-    e_output, src_mask, trg_mask))
+    if opt.nmt_model_type == 'transformer':
+        trg_mask = nopeak_mask(1, opt)
+        out = model.out(model.decoder(outputs,
+        e_output, src_mask, trg_mask))
+    else:
+        out = model.out(model.decoder(outputs, e_output))
+
     out = F.softmax(out, dim=-1)
     
     probs, ix = out[:, -1].data.topk(opt.k)
