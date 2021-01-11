@@ -11,7 +11,7 @@ import pdb
 import dill as pickle
 import argparse
 from Models import get_model
-from Beam import beam_search
+from Beam import beam_search, generate_rnn_translations
 from nltk.corpus import wordnet
 from torch.autograd import Variable
 import re
@@ -46,13 +46,16 @@ def translate_sentence(sentence, model, opt, SRC, TRG, counter):
     sentence = Variable(torch.LongTensor([indexed]))
     if opt.no_cuda is False:
         sentence = sentence.cuda()
-    try: 
-        import ipdb; ipdb.set_trace()
+    # try: 
+        # import ipdb; ipdb.set_trace()
+    if opt.nmt_model_type == 'transformer':
         sentence = beam_search(sentence, model, SRC, TRG, opt)
-    except:
-        sentence = ''
-        print(f'Error happened at sentence {counter}!')
-        import ipdb; ipdb.set_trace()
+    else:
+        sentence = generate_rnn_translations(sentence, model, TRG, opt)
+    # except:
+    #     sentence = ''
+    #     print(f'Error happened at sentence {counter}!')
+        # import ipdb; ipdb.set_trace()
         
     return  multiple_replace({' ?' : '?',' !':'!',' .':'.','\' ':'\'',' ,':','}, sentence)
 
@@ -60,6 +63,7 @@ def translate(opt, model, SRC, TRG):
     sentences = [text.lower() for text in opt.text]
     translated = []
 
+    print(f"We have {len(sentences)} to process!")
     for i, sentence in tqdm(enumerate(sentences)):
         if sentence.__contains__('.') == False:
             sentence = sentence + '.'
@@ -90,7 +94,33 @@ def main():
     
     opt = parser.parse_args()
 
-    opt.device = 0 if opt.no_cuda is False else -1
+    # class InputArgs():
+    #     def __init__(self):
+    #         self.translate_file = 'data/port_test.txt'
+    #         self.output = 'test_translations.txt' # 'rnn_naive_model_translations.txt' # 'vanilla_transformer.txt' 
+    #         self.load_weights = 'weights_test_align' # 'rnn_naive_model' # 'vanilla_transformer'
+    #         self.src_lang = 'pt'
+    #         self.trg_lang = 'en'
+    #         self.no_cuda = True
+    #         self.d_model = 300 
+    #         self.heads = 6
+    #         self.nmt_model_type = 'allign_and_translate' # 'transformer', 'rnn_naive_model', 'allign_and_translate' ...
+    #         self.word_embedding_type = None # None, 'glove' or 'fast_text'
+    #         self.k = 3
+    #         self.max_len = 100
+    #         self.dropout = 0.1
+    #         self.n_layers = 6
+    #         self.decoder_extra_layers = 0
+    #         self.floyd = False
+    #         # self.use_dynamic_batch = None
+    # opt = InputArgs()
+    # print(opt.__dict__)
+
+    if opt.no_cuda is False:
+        assert torch.cuda.is_available()
+        opt.device = torch.device("cuda")
+    else:
+        opt.device = torch.device("cpu")
  
     assert opt.k > 0
     assert opt.max_len > 10
