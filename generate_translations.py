@@ -14,6 +14,7 @@ from Models import get_model
 from Beam import beam_search, generate_rnn_translations
 from nltk.corpus import wordnet
 from torch.autograd import Variable
+from gensim.models import KeyedVectors
 import re
 
 def get_synonym(word, SRC):
