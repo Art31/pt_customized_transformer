@@ -106,15 +106,22 @@ def beam_search(src, model, SRC, TRG, opt):
             break
     
     if ind is None:
-        try:
-            length = (outputs[0]==eos_tok).nonzero()[0]
-        except:
-            import ipdb; ipdb.set_trace()
-        return ' '.join([TRG.vocab.itos[tok] for tok in outputs[0][1:length]])
+        length = (outputs[0]==eos_tok).nonzero()
+        if len(length) != 0:
+            return ' '.join([TRG.vocab.itos[tok] for tok in outputs[0][1:length[0]]])
+        else:
+            eos_3_hypothesis = torch.ones([3, 1], dtype=torch.int64).to(opt.device)*eos_tok
+            outputs = torch.cat((outputs, eos_3_hypothesis), dim=1)
+            return ' '.join([TRG.vocab.itos[tok] for tok in outputs[0][1:])
     
     else:
-        length = (outputs[ind]==eos_tok).nonzero()[0]
-        return ' '.join([TRG.vocab.itos[tok] for tok in outputs[ind][1:length]])
+        length = (outputs[ind]==eos_tok).nonzero()
+        if len(length) != 0:
+            return ' '.join([TRG.vocab.itos[tok] for tok in outputs[ind][1:length[0]]])
+        else:
+            eos_3_hypothesis = torch.ones([3, 1], dtype=torch.int64).to(opt.device)*eos_tok
+            outputs = torch.cat((outputs, eos_3_hypothesis), dim=1)
+            return ' '.join([TRG.vocab.itos[tok] for tok in outputs[ind][1:])
 
 def generate_rnn_translations(src, model, TRG, opt):
     max_length = opt.max_len
