@@ -112,7 +112,7 @@ def beam_search(src, model, SRC, TRG, opt):
         else:
             eos_3_hypothesis = torch.ones([3, 1], dtype=torch.int64).to(opt.device)*eos_tok
             outputs = torch.cat((outputs, eos_3_hypothesis), dim=1)
-            return ' '.join([TRG.vocab.itos[tok] for tok in outputs[0][1:])
+            return ' '.join([TRG.vocab.itos[tok] for tok in outputs[0][1:]])
     
     else:
         length = (outputs[ind]==eos_tok).nonzero()
@@ -121,7 +121,7 @@ def beam_search(src, model, SRC, TRG, opt):
         else:
             eos_3_hypothesis = torch.ones([3, 1], dtype=torch.int64).to(opt.device)*eos_tok
             outputs = torch.cat((outputs, eos_3_hypothesis), dim=1)
-            return ' '.join([TRG.vocab.itos[tok] for tok in outputs[ind][1:])
+            return ' '.join([TRG.vocab.itos[tok] for tok in outputs[ind][1:]])
 
 def generate_rnn_translations(src, model, TRG, opt):
     max_length = opt.max_len
