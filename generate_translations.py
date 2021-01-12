@@ -11,7 +11,7 @@ import pdb
 import dill as pickle
 import argparse
 from Models import get_model
-from Beam import beam_search, generate_rnn_translations
+from Beam import beam_search, generate_rnn_translations#, rnn_beam_search
 from nltk.corpus import wordnet
 from torch.autograd import Variable
 from gensim.models import KeyedVectors
@@ -52,6 +52,7 @@ def translate_sentence(sentence, model, opt, SRC, TRG, counter):
     if opt.nmt_model_type == 'transformer':
         sentence = beam_search(sentence, model, SRC, TRG, opt)
     else:
+        # sentence = rnn_beam_search(sentence, model, TRG, opt)
         sentence = generate_rnn_translations(sentence, model, TRG, opt)
     # except:
     #     sentence = ''
@@ -94,18 +95,19 @@ def main():
     parser.add_argument('-word_embedding_type', type=str, default=None)
     
     opt = parser.parse_args()
+    print(opt)
 
     # class InputArgs():
     #     def __init__(self):
     #         self.translate_file = 'data/port_test.txt'
     #         self.output = 'test_translations.txt' # 'rnn_naive_model_translations.txt' # 'vanilla_transformer.txt' 
-    #         self.load_weights = 'weights_test_align' # 'rnn_naive_model' # 'vanilla_transformer'
+    #         self.load_weights = 'weights_test' # 'rnn_naive_model' # 'vanilla_transformer'
     #         self.src_lang = 'pt'
     #         self.trg_lang = 'en'
     #         self.no_cuda = True
     #         self.d_model = 300 
     #         self.heads = 6
-    #         self.nmt_model_type = 'allign_and_translate' # 'transformer', 'rnn_naive_model', 'allign_and_translate' ...
+    #         self.nmt_model_type = 'rnn_naive_model' # 'transformer', 'rnn_naive_model', 'allign_and_translate' ...
     #         self.word_embedding_type = None # None, 'glove' or 'fast_text'
     #         self.k = 3
     #         self.max_len = 100

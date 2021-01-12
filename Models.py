@@ -167,7 +167,7 @@ class DecoderRNN(nn.Module):
         #n layers and n directions in the decoder will both always be 1, therefore:
         #hidden = [1, batch_size, d_model]
         #context = [1, batch_size, d_model]
-        input = input.unsqueeze(0)
+        # input = input.unsqueeze(0)
         embedded = self.embedding(input) # [1, 1] -> [1, 1, 300]
         #input = [1, batch_size]
         if self.opt.nmt_model_type == 'rnn_naive_model':
@@ -262,9 +262,9 @@ class NaiveModel(nn.Module):
             if self.opt.nmt_model_type == 'rnn_naive_model':
                 #insert input token embedding, previous hidden state and the context state
                 #receive output tensor (predictions) and new hidden state
-                output, hidden = self.decoder(input, hidden, context) # [[1024], [1, 1024, 300], [1, 1024, 300]] -> [[1024, 11436], [1, 1024, 300])]
+                output, hidden = self.decoder(input.unsqueeze(0), hidden, context) # [[1024], [1, 1024, 300], [1, 1024, 300]] -> [[1024, 11436], [1, 1024, 300])]
             elif self.opt.nmt_model_type == 'allign_and_translate':
-                output, hidden = self.decoder(input, hidden, encoder_outputs)
+                output, hidden = self.decoder(input.unsqueeze(0), hidden, encoder_outputs)
             
             #place predictions in a tensor holding predictions for each token
             outputs[t] = output

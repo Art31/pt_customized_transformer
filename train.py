@@ -144,7 +144,7 @@ def main():
     #         self.floyd = False 
     #         self.checkpoint = 1
     #         self.decoder_extra_layers = 0
-    #         self.nmt_model_type = 'allign_and_translate' # 'transformer', 'rnn_naive_model', 'allign_and_translate' ...
+    #         self.nmt_model_type = 'rnn_naive_model' # 'transformer', 'rnn_naive_model', 'allign_and_translate' ...
     #         self.word_embedding_type = None # None, 'glove' or 'fast_text'
     #         self.use_dynamic_batch = None
     # opt = InputArgs()
