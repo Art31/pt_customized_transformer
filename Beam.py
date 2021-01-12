@@ -10,7 +10,6 @@ def init_vars(src, model, SRC, TRG, opt):
     src_mask = (src != SRC.vocab.stoi['<pad>']).unsqueeze(-2)
 
     if opt.nmt_model_type == 'transformer':
-        import ipdb; ipdb.set_trace()
         outputs = torch.LongTensor([[init_tok]])
         if opt.no_cuda is False:
             outputs = outputs.cuda()
