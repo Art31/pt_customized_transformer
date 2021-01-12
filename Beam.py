@@ -10,7 +10,9 @@ def init_vars(src, model, SRC, TRG, opt):
     src_mask = (src != SRC.vocab.stoi['<pad>']).unsqueeze(-2)
 
     if opt.nmt_model_type == 'transformer':
-        outputs = torch.LongTensor([[init_tok]], device=opt.device)
+        outputs = torch.LongTensor([[init_tok]])
+        if opt.no_cuda is False:
+            outputs = outputs.cuda()
         e_output = model.encoder(src, src_mask) # [[1, 7], [1, 1, 7]] -> [1, 7, 300 (d_model)]
         trg_mask = nopeak_mask(1, opt)
         out = model.out(model.decoder(outputs,
