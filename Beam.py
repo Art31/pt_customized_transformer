@@ -11,7 +11,7 @@ def init_vars(src, model, SRC, TRG, opt):
 
     if opt.nmt_model_type == 'transformer':
         if opt.no_cuda is False:
-            outputs = torch.LongTensor([[init_tok]], device=1)
+            outputs = torch.LongTensor([[init_tok]]).to(opt.device)
         else: 
             outputs = torch.LongTensor([[init_tok]])
         # if opt.no_cuda is False:
@@ -22,7 +22,7 @@ def init_vars(src, model, SRC, TRG, opt):
                 e_output, src_mask, trg_mask)) # [[1, 1], [1, 7, 300]] -> [1, 1, 300] -> [1, 1, 11436 (out_features)]
         out = F.softmax(out, dim=-1) # [1, 1, 11436])
     elif opt.nmt_model_type == 'rnn_naive_model':
-        outputs = torch.LongTensor([init_tok for i in range(src.shape[1])], device=opt.device)
+        outputs = torch.LongTensor([init_tok for i in range(src.shape[1])]).to(opt.device)
         e_output = model.encoder(src) # [1, 7] -> [1, 7, 300 (d_model)]
         encoder_hidden = e_output
         out, decoder_hidden = model.decoder(
@@ -35,15 +35,11 @@ def init_vars(src, model, SRC, TRG, opt):
     probs, ix = out[:, -1].data.topk(opt.k)
     log_scores = torch.Tensor([math.log(prob) for prob in probs.data[0]]).unsqueeze(0)
     
-    outputs = torch.zeros(opt.k, opt.max_len).long()
-    if opt.no_cuda is False:
-        outputs = outputs.cuda()
+    outputs = torch.zeros(opt.k, opt.max_len).long().to(opt.device)
     outputs[:, 0] = init_tok
     outputs[:, 1] = ix[0]
     
-    e_outputs = torch.zeros(opt.k, e_output.size(-2),e_output.size(-1))
-    if opt.no_cuda is False:
-        e_outputs = e_outputs.cuda()
+    e_outputs = torch.zeros(opt.k, e_output.size(-2),e_output.size(-1)).to(opt.device)
     e_outputs[:, :] = e_output[0]
     
     return outputs, e_outputs, log_scores
@@ -94,7 +90,7 @@ def beam_search(src, model, SRC, TRG, opt):
         outputs, log_scores = k_best_outputs(outputs, out, log_scores, i, opt.k) # (torch.Size([3, 100]), torch.Size([3, 2, 11436]))
         
         ones = (outputs==eos_tok).nonzero() # Occurrences of end symbols for all input sentences.
-        sentence_lengths = torch.zeros(len(outputs), dtype=torch.long, device=opt.device)
+        sentence_lengths = torch.zeros(len(outputs), dtype=torch.long).to(opt.device)
         for vec in ones:
             i = vec[0]
             if sentence_lengths[i]==0: # First end symbol has not been found yet
@@ -210,7 +206,7 @@ def generate_rnn_translations(src, model, TRG, opt):
 #         encoder_output = encoder_outputs[:,idx, :].unsqueeze(1)
 
 #         # Start with the start of the sentence token
-#         decoder_input = torch.LongTensor([[opt.TRG.vocab.stoi["<sos>"]]], device=opt.device)
+#         decoder_input = torch.LongTensor([[opt.TRG.vocab.stoi["<sos>"]]]).to(opt.device)
 
 #         # Number of sentence to generate
 #         endnodes = []
@@ -299,7 +295,7 @@ def generate_rnn_translations(src, model, TRG, opt):
 #         outputs = [TRG.vocab.stoi["<sos>"]]
 #         word_outputs = ["<sos>"]
 
-#         target_tensor = torch.ones([src.shape[1], max_length], device=opt.device)
+#         target_tensor = torch.ones([src.shape[1], max_length]).to(opt.device)
 #         decoded_batch = beam_decode(target_tensor, encoder_hidden, opt, model.decoder, encoder_outputs)
 
 #         # TODO SOLVE THIS
