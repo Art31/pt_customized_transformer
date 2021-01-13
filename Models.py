@@ -74,7 +74,7 @@ class EncoderRNN(nn.Module):
         
         if opt.nmt_model_type == 'rnn_naive_model':
             self.rnn = nn.GRU(d_model, d_model)
-        elif opt.nmt_model_type == 'allign_and_translate':
+        elif opt.nmt_model_type == 'align_and_translate':
             self.rnn = nn.GRU(d_model, d_model, bidirectional = True)
             self.fc = nn.Linear(d_model * 2, d_model)
 
@@ -93,7 +93,7 @@ class EncoderRNN(nn.Module):
         # return output, hidden # return only context (hidden state) in first paper
         if self.opt.nmt_model_type == 'rnn_naive_model':
             return hidden 
-        elif self.opt.nmt_model_type == 'allign_and_translate':
+        elif self.opt.nmt_model_type == 'align_and_translate':
             hidden = torch.tanh(self.fc(torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = 1)))
             return outputs, hidden
 
@@ -116,7 +116,7 @@ class DecoderRNN(nn.Module):
         if self.opt.nmt_model_type == 'rnn_naive_model':
             self.rnn = nn.GRU(d_model + d_model, d_model)
             self.fc_out = nn.Linear(d_model + d_model * 2, output_size)
-        elif self.opt.nmt_model_type == 'allign_and_translate':
+        elif self.opt.nmt_model_type == 'align_and_translate':
             self.attention = attention
             self.rnn = nn.GRU((d_model * 2) + d_model, d_model)
             self.fc_out = nn.Linear(self.attention.attn_in + d_model, output_size)
@@ -187,7 +187,7 @@ class DecoderRNN(nn.Module):
             #prediction = [batch_size, output dim]
             return prediction, hidden
             
-        elif self.opt.nmt_model_type == 'allign_and_translate':
+        elif self.opt.nmt_model_type == 'align_and_translate':
             weighted_encoder_rep = self._weighted_encoder_rep(hidden, context)
             emb_con = torch.cat((embedded, weighted_encoder_rep), dim = 2)
             output, hidden = self.rnn(emb_con, hidden.unsqueeze(0))
@@ -251,7 +251,7 @@ class NaiveModel(nn.Module):
             context = self.encoder(src) # [sent_len, batch_size] -> [1, batch_size, d_model]
             #context also used as the initial hidden state of the decoder
             hidden = context
-        elif self.opt.nmt_model_type == 'allign_and_translate':
+        elif self.opt.nmt_model_type == 'align_and_translate':
             encoder_outputs, hidden = self.encoder(src)
         
         #first input to the decoder is the <sos> tokens
@@ -263,7 +263,7 @@ class NaiveModel(nn.Module):
                 #insert input token embedding, previous hidden state and the context state
                 #receive output tensor (predictions) and new hidden state
                 output, hidden = self.decoder(input.unsqueeze(0), hidden, context) # [[1024], [1, 1024, 300], [1, 1024, 300]] -> [[1024, 11436], [1, 1024, 300])]
-            elif self.opt.nmt_model_type == 'allign_and_translate':
+            elif self.opt.nmt_model_type == 'align_and_translate':
                 output, hidden = self.decoder(input.unsqueeze(0), hidden, encoder_outputs)
             
             #place predictions in a tensor holding predictions for each token
@@ -363,7 +363,7 @@ def get_model(opt, src_vocab, trg_vocab, word_emb):
         encoder = EncoderRNN(src_vocab, opt.d_model, opt.SRC, word_emb, opt)
         decoder = DecoderRNN(opt.d_model, trg_vocab, opt.TRG, word_emb, opt)
         model = NaiveModel(encoder, decoder, opt) # (opt.d_model, opt.dropout, opt.device, opt.max_strlen)
-    elif opt.nmt_model_type == 'allign_and_translate': 
+    elif opt.nmt_model_type == 'align_and_translate': 
         attn = Attention(opt.d_model, 32)
         encoder = EncoderRNN(src_vocab, opt.d_model, opt.SRC, word_emb, opt)
         decoder = DecoderRNN(opt.d_model, trg_vocab, opt.TRG, word_emb, opt, attention=attn)

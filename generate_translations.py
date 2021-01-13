@@ -107,7 +107,7 @@ def main():
     #         self.no_cuda = True
     #         self.d_model = 300 
     #         self.heads = 6
-    #         self.nmt_model_type = 'rnn_naive_model' # 'transformer', 'rnn_naive_model', 'allign_and_translate' ...
+    #         self.nmt_model_type = 'rnn_naive_model' # 'transformer', 'rnn_naive_model', 'align_and_translate' ...
     #         self.word_embedding_type = None # None, 'glove' or 'fast_text'
     #         self.k = 3
     #         self.max_len = 100

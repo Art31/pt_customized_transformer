@@ -28,7 +28,7 @@ def init_vars(src, model, SRC, TRG, opt):
         out, decoder_hidden = model.decoder(
                 outputs.unsqueeze(0), encoder_hidden, e_output)
         out = out.unsqueeze(0) # [7, 11436] -> [1, 7, 11436]
-    # elif opt.nmt_model_type == 'allign_and_translate':
+    # elif opt.nmt_model_type == 'align_and_translate':
     #     e_output, hidden = model.encoder(src)
     
     
@@ -131,7 +131,7 @@ def generate_rnn_translations(src, model, TRG, opt):
         if opt.nmt_model_type == 'rnn_naive_model':
             encoder_outputs = model.encoder(src)
             encoder_hidden = encoder_outputs
-        elif opt.nmt_model_type == 'allign_and_translate':
+        elif opt.nmt_model_type == 'align_and_translate':
             encoder_outputs, encoder_hidden = model.encoder(src)
 
         decoder_hidden = encoder_hidden
@@ -295,7 +295,7 @@ def generate_rnn_translations(src, model, TRG, opt):
 #         if opt.nmt_model_type == 'rnn_naive_model':
 #             encoder_outputs = model.encoder(src)
 #             encoder_hidden = encoder_outputs
-#         elif opt.nmt_model_type == 'allign_and_translate':
+#         elif opt.nmt_model_type == 'align_and_translate':
 #             encoder_outputs, encoder_hidden = model.encoder(src)
 
 #         decoder_hidden = encoder_hidden
