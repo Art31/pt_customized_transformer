@@ -4,7 +4,7 @@ import torch.nn as nn
 from torchtext import data
 from Tokenize import tokenize
 from Batch import MyIterator, batch_size_fn
-import os, time, math
+import os, time, math, shutil
 import dill as pickle
 from tqdm import tqdm
 
@@ -35,6 +35,7 @@ def read_data(opt):
     if opt.src_data is not None:
         try:
             opt.src_data = open(opt.src_data).read().strip().split('\n')
+            opt.src_val_data = open(opt.src_val_data).read().strip().split('\n')
         except:
             print("error: '" + opt.src_data + "' file not found")
             quit()
@@ -42,6 +43,7 @@ def read_data(opt):
     if opt.trg_data is not None:
         try:
             opt.trg_data = open(opt.trg_data).read().strip().split('\n')
+            opt.trg_val_data = open(opt.trg_val_data).read().strip().split('\n')
         except:
             print("error: '" + opt.trg_data + "' file not found")
             quit()
@@ -91,10 +93,7 @@ def create_fields(opt):
 
     return(SRC, TRG)
 
-def create_dataset(opt, SRC, TRG, word_emb):
-    timer = Timer()
-    print("creating dataset and iterator... ")
-
+def generate_tabular_dataset(opt):
     raw_data = {'src' : [line for line in opt.src_data], 'trg': [line for line in opt.trg_data]}
     df = pd.DataFrame(raw_data, columns=["src", "trg"])
     
@@ -103,17 +102,23 @@ def create_dataset(opt, SRC, TRG, word_emb):
 
     df.to_csv("translate_transformer_temp.csv", index=False)
     
-    data_fields = [('src', SRC), ('trg', TRG)]
-    train = data.TabularDataset('./translate_transformer_temp.csv', format='csv', fields=data_fields)
+    data_fields = [('src', opt.SRC), ('trg', opt.TRG)]
+    dataset = data.TabularDataset('./translate_transformer_temp.csv', format='csv', fields=data_fields)
+    return dataset 
+
+def create_dataset(opt, SRC, TRG, word_emb):
+    timer = Timer()
+    print("creating dataset and iterator... ")
+    train = generate_tabular_dataset(opt)
+    valid = generate_tabular_dataset(opt)    
 
     if opt.use_dynamic_batch == True:
-        train_iter = MyIterator(train, batch_size=opt.batchsize, device=opt.device,
+        train_iter, valid_iter = MyIterator.splits((train, valid), batch_size=opt.batchsize, device=opt.device,
                         repeat=False, sort_key=lambda x: (len(x.src), len(x.trg)),
-                        batch_size_fn=batch_size_fn, train=True, shuffle=True) # batch_size_fn = dynamic batching
+                        batch_size_fn=batch_size_fn, shuffle=True) # batch_size_fn = dynamic batching
     else:
-        train_iter = MyIterator(train, batch_size=opt.batchsize, device=opt.device,
-                        repeat=False, sort_key=lambda x: (len(x.src), len(x.trg)),
-                        train=True, shuffle=True)
+        train_iter, valid_iter = MyIterator.splits((train, valid), batch_size=opt.batchsize, device=opt.device,
+                        repeat=False, sort_key=lambda x: (len(x.src), len(x.trg)), shuffle=True)
 
     os.remove('translate_transformer_temp.csv')
 
@@ -131,8 +136,10 @@ def create_dataset(opt, SRC, TRG, word_emb):
             try:
                 os.mkdir("weights")
             except:
-                print("weights folder already exists, run program with -load_weights weights to load them")
-                quit()
+                print("Deleting and creating new weights folder. If this was unexpected, run program before 5s with -load_weights weights to load them")
+                time.sleep(5)
+                shutil.rmtree("weights")
+                os.mkdir("weights")
             pickle.dump(SRC, open('weights/SRC.pkl', 'wb'))
             pickle.dump(TRG, open('weights/TRG.pkl', 'wb'))
 
@@ -143,7 +150,7 @@ def create_dataset(opt, SRC, TRG, word_emb):
     opt.train_len = get_len(train_iter)
     timer.print_time('create_dataset')
 
-    return train_iter, SRC, TRG
+    return train_iter, valid_iter, SRC, TRG
 
 def get_len(train):
 

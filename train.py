@@ -10,6 +10,42 @@ from Batch import create_masks
 from gensim.models import KeyedVectors
 import dill as pickle
 
+def evaluate(model, iterator, criterion, opt):
+    
+    model.eval()
+    epoch_loss = 0
+    
+    print(f"Evaluating data...")
+    
+    with torch.no_grad():
+    
+        for i, batch in tqdm(enumerate(iterator)):
+
+            if opt.nmt_model_type == 'transformer':
+                src = batch.src.transpose(0,1)
+                trg = batch.trg.transpose(0,1)
+                src_mask, trg_mask = create_masks(src, trg[:, :-1], opt)
+                output = model(src, trg[:,:-1], src_mask, trg_mask)
+            else: 
+                src = batch.src 
+                trg = batch.trg
+                output = model(src, trg[:,:-1])
+            
+            #output = [batch size, trg sent len - 1, output dim]
+            #trg = [batch size, trg sent len]
+            
+            output = output.contiguous().view(-1, output.shape[-1])
+            trg = trg[:,1:].contiguous().view(-1)
+            
+            #output = [batch size * trg sent len - 1, output dim]
+            #trg = [batch size * trg sent len - 1]
+            
+            loss = criterion(output, trg)
+
+            epoch_loss += loss.item()
+        
+    return epoch_loss / len(iterator)
+
 def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
     
     print("training model...")
@@ -23,8 +59,8 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
 
         total_loss = 0
         if opt.floyd is False:
-            print("   %dm: epoch %d [%s]  %d%%  loss = %s" %\
-            ((time.time() - start)//60, epoch + 1, "".join(' '*20), 0, '...'), end='\r')
+            print("   %dm: epoch %d [%s]  %d%%  loss = %s | valid_loss = %s" %\
+            ((time.time() - start)//60, epoch + 1, "".join(' '*20), 0, '...', '...'), end='\r')
         
         if opt.checkpoint > 0:
             torch.save(model.state_dict(), 'weights/model_weights')
@@ -34,14 +70,26 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
 
             # [opt.SRC.vocab.itos[i] for i in batch.src[:, 0]] # to query batch words from field
             if opt.nmt_model_type == 'transformer':
-                src = batch.src.transpose(0,1)
-                trg = batch.trg.transpose(0,1)
+                # ----- OLD WAY ------ #
+                # src = batch.src.transpose(0,1)
+                # trg = batch.trg.transpose(0,1)
+                # trg_input = trg[:, :-1]
+                # src_mask, trg_mask = create_masks(src, trg_input, opt)
+                # preds = model(src, trg_input, src_mask, trg_mask) # -> [batch_size, sent_len, emb_dim]
+                # ys = trg[:, 1:].contiguous().view(-1) # [batch_size * sent_len]
+                # opt.optimizer.zero_grad()
+                # loss = F.cross_entropy(preds.view(-1, preds.size(-1)), ys, ignore_index=opt.trg_pad)
+                # -------------------- #
+                # NEW WAY
+                src = batch.src.transpose(0,1) # do we really need the transpose?
+                trg = batch.trg.transpose(0,1) # do we really need the transpose?
                 trg_input = trg[:, :-1]
                 src_mask, trg_mask = create_masks(src, trg_input, opt)
-                preds = model(src, trg_input, src_mask, trg_mask) # -> [batch_size, sent_len, emb_dim]
-                ys = trg[:, 1:].contiguous().view(-1) # [batch_size * sent_len]
                 opt.optimizer.zero_grad()
-                loss = F.cross_entropy(preds.view(-1, preds.size(-1)), ys, ignore_index=opt.trg_pad)
+                output = model(src, trg_input, src_mask, trg_mask) # -> [batch_size, sent_len, emb_dim]
+                output = output.contiguous().view(-1, output.shape[-1])
+                trg = trg[:,1:].contiguous().view(-1)
+                loss = criterion(output, trg)
             else:
                 src = batch.src
                 trg = batch.trg
@@ -64,15 +112,16 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
             total_loss += loss.item()
             
             if (i + 1) % opt.printevery == 0:
-                 p = int(100 * (i + 1) / opt.train_len)
-                 avg_loss = total_loss/opt.printevery
-                 if opt.floyd is False:
-                    print("   %dm: epoch %d [%s%s]  %d%%  loss = %.3f" %\
-                    ((time.time() - start)//60, epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_loss), end='\r')
-                 else:
-                    print("   %dm: epoch %d [%s%s]  %d%%  loss = %.3f" %\
-                    ((time.time() - start)//60, epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_loss))
-                 total_loss = 0
+                avg_valid_loss = evaluate(model, opt.valid, criterion, opt) 
+                p = int(100 * (i + 1) / opt.train_len)
+                avg_train_loss = total_loss/opt.printevery
+                if opt.floyd is False:
+                   print("   %dm: epoch %d [%s%s]  %d%%  loss = %.3f | valid_loss = %.3f" %\
+                   ((time.time() - start)//60, epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_train_loss, avg_valid_loss), end='\r')
+                else:
+                   print("   %dm: epoch %d [%s%s]  %d%%  loss = %.3f" %\
+                   ((time.time() - start)//60, epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_train_loss, avg_valid_loss))
+                total_loss = 0
             
             if opt.checkpoint > 0 and ((time.time()-cptime)//60) // opt.checkpoint >= 1:
                 torch.save(model.state_dict(), 'weights/model_weights')
@@ -96,7 +145,9 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-src_data', required=True)
+    parser.add_argument('-src_val_data', required=True, default='data/port_dev.txt')
     parser.add_argument('-trg_data', required=True)
+    parser.add_argument('-trg_val_data', required=True, default='data/eng_dev.txt')
     parser.add_argument('-src_lang', required=True)
     parser.add_argument('-trg_lang', required=True)
     parser.add_argument('-no_cuda', action='store_true')
@@ -125,7 +176,9 @@ def main():
     # class InputArgs():
     #     def __init__(self):
     #         self.src_data = 'data/port_train.txt'
+    #         self.src_val_data = 'data/port_dev.txt'
     #         self.trg_data = 'data/eng_train.txt'
+    #         self.trg_val_data = 'data/eng_train.txt'
     #         self.src_lang = 'pt'
     #         self.trg_lang = 'en'
     #         self.no_cuda = True
@@ -144,7 +197,7 @@ def main():
     #         self.floyd = False 
     #         self.checkpoint = 1
     #         self.decoder_extra_layers = 0
-    #         self.nmt_model_type = 'rnn_naive_model' # 'transformer', 'rnn_naive_model', 'align_and_translate' ...
+    #         self.nmt_model_type = 'transformer' # 'transformer', 'rnn_naive_model', 'align_and_translate' ...
     #         self.word_embedding_type = None # None, 'glove' or 'fast_text'
     #         self.use_dynamic_batch = None
     # opt = InputArgs()
@@ -172,8 +225,8 @@ def main():
     
     read_data(opt)
     SRC, TRG = create_fields(opt)
-    opt.train, SRC, TRG = create_dataset(opt, SRC, TRG, word_emb)
     opt.SRC = SRC; opt.TRG = TRG # important, these are used to input embeddings
+    opt.train, opt.valid, SRC, TRG = create_dataset(opt, SRC, TRG, word_emb)
     opt.word_emb = word_emb # just for querying vocabulary
     model = get_model(opt, len(SRC.vocab), len(TRG.vocab), word_emb)
 

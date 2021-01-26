@@ -351,6 +351,9 @@ class Attention(nn.Module):
         
         return F.softmax(attention, dim=1)
 
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
 def get_model(opt, src_vocab, trg_vocab, word_emb):
     
     assert opt.d_model % opt.heads == 0
@@ -377,6 +380,8 @@ def get_model(opt, src_vocab, trg_vocab, word_emb):
         for p in model.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p) 
+
+    print(f'The model has {count_parameters(model):,} trainable parameters')
     
     if opt.no_cuda is False:
         model = model.cuda()
