@@ -112,15 +112,14 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
             total_loss += loss.item()
             
             if (i + 1) % opt.printevery == 0:
-                avg_valid_loss = evaluate(model, opt.valid, criterion, opt) 
                 p = int(100 * (i + 1) / opt.train_len)
                 avg_train_loss = total_loss/opt.printevery
                 if opt.floyd is False:
-                   print("   %dm: epoch %d [%s%s]  %d%%  loss = %.3f | valid_loss = %.3f" %\
-                   ((time.time() - start)//60, epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_train_loss, avg_valid_loss), end='\r')
+                   print("   %dm: epoch %d [%s%s]  %d%%  loss = %.3f" %\
+                   ((time.time() - start)//60, epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_train_loss), end='\r')
                 else:
                    print("   %dm: epoch %d [%s%s]  %d%%  loss = %.3f" %\
-                   ((time.time() - start)//60, epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_train_loss, avg_valid_loss))
+                   ((time.time() - start)//60, epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_train_loss))
                 total_loss = 0
             
             if opt.checkpoint > 0 and ((time.time()-cptime)//60) // opt.checkpoint >= 1:
@@ -128,8 +127,9 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
                 cptime = time.time()
    
    
-        print("%dm: epoch %d [%s%s]  %d%%  loss = %.3f\nepoch %d complete, loss = %.03f" %\
-        ((time.time() - start)//60, epoch + 1, "".join('#'*(100//5)), "".join(' '*(20-(100//5))), 100, avg_loss, epoch + 1, avg_loss))
+        avg_valid_loss = evaluate(model, opt.valid, criterion, opt) 
+        print("%dm: epoch %d [%s%s]  %d%%  loss = %.3f\nepoch %d complete, loss = %.03f | valid_loss = %.3f" %\
+        ((time.time() - start)//60, epoch + 1, "".join('#'*(100//5)), "".join(' '*(20-(100//5))), 100, avg_train_loss, epoch + 1, avg_train_loss, avg_valid_loss))
 
 def main():
 
