@@ -145,9 +145,9 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-src_data', required=True)
-    parser.add_argument('-src_val_data', required=True, default='data/port_dev.txt')
+    parser.add_argument('-src_val_data', required=False, default='data/port_dev.txt')
     parser.add_argument('-trg_data', required=True)
-    parser.add_argument('-trg_val_data', required=True, default='data/eng_dev.txt')
+    parser.add_argument('-trg_val_data', required=False, default='data/eng_dev.txt')
     parser.add_argument('-src_lang', required=True)
     parser.add_argument('-trg_lang', required=True)
     parser.add_argument('-no_cuda', action='store_true')
