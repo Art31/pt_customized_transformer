@@ -93,11 +93,6 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
             else:
                 src = batch.src
                 trg = batch.trg
-                # ----- OLD WAY ------ #
-                # preds = model(src, trg)
-                # ys = trg.contiguous().view(-1)
-                # -------------------- #
-                # NEW WAY
                 opt.optimizer.zero_grad()
                 output = model(src, trg)
                 output = output[1:].view(-1, output.shape[-1])

@@ -11,7 +11,7 @@ import pdb
 import dill as pickle
 import argparse
 from Models import get_model
-from Beam import beam_search, generate_rnn_translations#, rnn_beam_search
+from Beam import beam_search
 from nltk.corpus import wordnet
 from torch.autograd import Variable
 from gensim.models import KeyedVectors
@@ -49,11 +49,12 @@ def translate_sentence(sentence, model, opt, SRC, TRG, counter):
         sentence = sentence.cuda()
     # try: 
         # import ipdb; ipdb.set_trace()
-    if opt.nmt_model_type == 'transformer':
-        sentence = beam_search(sentence, model, SRC, TRG, opt)
-    else:
+    # if opt.nmt_model_type == 'transformer':
+    sentence = beam_search(sentence, model, SRC, TRG, opt)
+    # else:
         # sentence = rnn_beam_search(sentence, model, TRG, opt)
-        sentence = generate_rnn_translations(sentence, model, TRG, opt)
+        # sentence = beam_search(sentence, model, SRC, TRG, opt)
+        # sentence = generate_rnn_translations(sentence, model, SRC, TRG, opt)
     # except:
     #     sentence = ''
     #     print(f'Error happened at sentence {counter}!')
@@ -101,7 +102,7 @@ def main():
     #     def __init__(self):
     #         self.translate_file = 'data/port_test.txt'
     #         self.output = 'test_translations.txt' # 'rnn_naive_model_translations.txt' # 'vanilla_transformer.txt' 
-    #         self.load_weights = 'weights_test' # 'rnn_naive_model' # 'vanilla_transformer'
+    #         self.load_weights = 'rnn_naive_model' # 'weights_test' # 'rnn_naive_model' # 'transformer_test'
     #         self.src_lang = 'pt'
     #         self.trg_lang = 'en'
     #         self.no_cuda = True
