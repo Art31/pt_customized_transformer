@@ -26,19 +26,14 @@ def evaluate(model, iterator, criterion, opt):
                 trg = batch.trg.transpose(0,1)
                 src_mask, trg_mask = create_masks(src, trg[:, :-1], opt)
                 output = model(src, trg[:,:-1], src_mask, trg_mask)
+                output = output.contiguous().view(-1, output.shape[-1])
+                trg = trg[:,1:].contiguous().view(-1)
             else: 
                 src = batch.src 
                 trg = batch.trg
                 output = model(src, trg[:,:-1])
-            
-            #output = [batch size, trg sent len - 1, output dim]
-            #trg = [batch size, trg sent len]
-            
-            output = output.contiguous().view(-1, output.shape[-1])
-            trg = trg[:,1:].contiguous().view(-1)
-            
-            #output = [batch size * trg sent len - 1, output dim]
-            #trg = [batch size * trg sent len - 1]
+                output = output[1:].view(-1, output.shape[-1])
+                trg = trg[1:].view(-1)
             
             loss = criterion(output, trg)
 
