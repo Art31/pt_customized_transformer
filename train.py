@@ -44,15 +44,15 @@ def evaluate(model, iterator, criterion, opt):
 def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
     
     print("training model...")
-    model.train()
     start = time.time()
     if opt.checkpoint > 0:
         cptime = time.time()
                  
     criterion = nn.CrossEntropyLoss(ignore_index = opt.trg_pad) # optional (new way)
     for epoch in range(opt.epochs):
-
+        model.train()
         total_loss = 0
+
         if opt.floyd is False:
             print("   %dm: epoch %d [%s]  %d%%  loss = %s | valid_loss = %s" %\
             ((time.time() - start)//60, epoch + 1, "".join(' '*20), 0, '...', '...'), end='\r')
