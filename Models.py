@@ -97,9 +97,6 @@ class EncoderRNN(nn.Module):
             hidden = torch.tanh(self.fc(torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = 1)))
             return outputs, hidden
 
-    # def initHidden(self):
-    #     return torch.zeros(1, 1, self.d_model, device=self.device)
-
 class DecoderRNN(nn.Module):
     def __init__(self, d_model, output_size, field, word_emb_model, opt, attention=None): # emb_dim = hid_dim = d_model
         super(DecoderRNN, self).__init__()

@@ -72,7 +72,7 @@ def beam_search(src, model, SRC, TRG, opt):
     src_mask = (src != SRC.vocab.stoi['<pad>']).unsqueeze(-2)
     ind = None
     if opt.nmt_model_type == 'rnn_naive_model':
-        word_vector, encoder_outputs, log_scores = init_vars(src, model, SRC, TRG, opt)         
+        outputs, encoder_outputs, log_scores = init_vars(src, model, SRC, TRG, opt)
         encoder_hidden = encoder_outputs
         decoder_hidden = encoder_hidden
 
@@ -85,16 +85,17 @@ def beam_search(src, model, SRC, TRG, opt):
             out = F.softmax(out, dim=-1)
         elif opt.nmt_model_type == 'rnn_naive_model':
             decoder_input = torch.zeros(opt.k, src.shape[1]).long().to(opt.device) # TODO change to opt.max_len
-            decoder_input[:, :i] = word_vector[:, :i]
+            decoder_input[:, :i] = outputs[:, :i]
             # OPTION 2 - input a tensor of size src.shape[1] and fill up the other numbers with <unk>
-            decoder_hidden_copy = decoder_hidden.detach().clone()
             for j in range(opt.k):
-                out_piece, decoder_hidden = model.decoder(decoder_input[i, :].unsqueeze(0), 
-                                            decoder_hidden_copy[i, :].unsqueeze(0), encoder_outputs[i, :].unsqueeze(0))
+                out_piece, decoder_hidden_piece = model.decoder(decoder_input[j, :].unsqueeze(0), 
+                                            decoder_hidden[j, :].unsqueeze(0), encoder_outputs[j, :].unsqueeze(0))
                 if j == 0:
                     out = out_piece[:i, :].unsqueeze(0)
+                    decoder_hidden = decoder_hidden_piece[:i, :]
                 else:
                     out = torch.cat([out, out_piece[:i, :].unsqueeze(0)], dim=0) # final shape: [src.shape[1]*3, vocab_size]
+                    decoder_hidden = torch.cat([decoder_hidden, decoder_hidden_piece[:i, :]], dim=0)
     
         outputs, log_scores = k_best_outputs(outputs, out, log_scores, i, opt.k, TRG) # (torch.Size([3, 100]), torch.Size([3, 2, 11436]))
         

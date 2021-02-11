@@ -31,7 +31,7 @@ def evaluate(model, iterator, criterion, opt):
             else: 
                 src = batch.src 
                 trg = batch.trg
-                output = model(src, trg[:,:-1])
+                output = model(src, trg)
                 output = output[1:].view(-1, output.shape[-1])
                 trg = trg[1:].view(-1)
             
@@ -116,7 +116,6 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
                 torch.save(model.state_dict(), 'weights/model_weights')
                 cptime = time.time()
    
-   
         avg_valid_loss = evaluate(model, opt.valid, criterion, opt) 
         print("%dm: epoch %d [%s%s]  %d%%  loss = %.3f\nepoch %d complete, loss = %.03f | valid_loss = %.3f" %\
         ((time.time() - start)//60, epoch + 1, "".join('#'*(100//5)), "".join(' '*(20-(100//5))), 100, avg_train_loss, epoch + 1, avg_train_loss, avg_valid_loss))
@@ -187,7 +186,7 @@ def main():
     #         self.floyd = False 
     #         self.checkpoint = 1
     #         self.decoder_extra_layers = 0
-    #         self.nmt_model_type = 'transformer' # 'transformer', 'rnn_naive_model', 'align_and_translate' ...
+    #         self.nmt_model_type = 'rnn_naive_model' # 'transformer', 'rnn_naive_model', 'align_and_translate' ...
     #         self.word_embedding_type = None # None, 'glove' or 'fast_text'
     #         self.use_dynamic_batch = None
     # opt = InputArgs()
