@@ -67,14 +67,15 @@ def k_best_outputs(outputs, out, log_scores, i, k, TRG):
     return outputs, log_scores
 
 def beam_search(src, model, SRC, TRG, opt):
-    outputs, e_outputs, log_scores = init_vars(src, model, SRC, TRG, opt) #  [SRC.vocab.itos[i] for i in src.tolist()[0]] to debug
     eos_tok = TRG.vocab.stoi['<eos>']
-    src_mask = (src != SRC.vocab.stoi['<pad>']).unsqueeze(-2)
     ind = None
     if opt.nmt_model_type == 'rnn_naive_model':
         outputs, encoder_outputs, log_scores = init_vars(src, model, SRC, TRG, opt)
         encoder_hidden = encoder_outputs
         decoder_hidden = encoder_hidden
+    elif opt.nmt_model_type == 'transformer':
+        src_mask = (src != SRC.vocab.stoi['<pad>']).unsqueeze(-2)
+        outputs, e_outputs, log_scores = init_vars(src, model, SRC, TRG, opt) #  [SRC.vocab.itos[i] for i in src.tolist()[0]] to debug
 
     for i in range(2, opt.max_len): # we already filled init_tok and some of most probable translations
     
@@ -92,10 +93,11 @@ def beam_search(src, model, SRC, TRG, opt):
                                             decoder_hidden[j, :].unsqueeze(0), encoder_outputs[j, :].unsqueeze(0))
                 if j == 0:
                     out = out_piece[:i, :].unsqueeze(0)
-                    decoder_hidden = decoder_hidden_piece[:i, :]
+                    decoder_hidden_carry = decoder_hidden_piece[:i, :]
                 else:
                     out = torch.cat([out, out_piece[:i, :].unsqueeze(0)], dim=0) # final shape: [src.shape[1]*3, vocab_size]
-                    decoder_hidden = torch.cat([decoder_hidden, decoder_hidden_piece[:i, :]], dim=0)
+                    decoder_hidden_carry = torch.cat([decoder_hidden_carry, decoder_hidden_piece[:i, :]], dim=0)
+            decoder_hidden = decoder_hidden_carry
     
         outputs, log_scores = k_best_outputs(outputs, out, log_scores, i, opt.k, TRG) # (torch.Size([3, 100]), torch.Size([3, 2, 11436]))
         
