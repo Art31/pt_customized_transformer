@@ -25,13 +25,15 @@ def init_vars(src, model, SRC, TRG, opt):
     elif opt.nmt_model_type == 'rnn_naive_model':
         outputs = torch.zeros(1, src.shape[1]).long().to(opt.device)
         outputs[0, 0] = init_tok
+        # ---------- OLD RNN ---------- #
         e_output = model.encoder(src) # [1, 7] -> [1, 7, 300 (d_model)]
         encoder_hidden = e_output
         out, decoder_hidden = model.decoder(
-                outputs, encoder_hidden, e_output)
+                outputs[0, :], encoder_hidden, e_output) # ([1, 7], [1, 7, 300], [1, 7, 300]) -> [[7, 11436], [1, 7, 300]]
         out = out[0, :] # [7, 11436] -> [1, 11436]
         out = F.softmax(out, dim=-1)
-        probs, ix = out.unsqueeze(0).data.topk(opt.k)
+        probs, ix = out.unsqueeze(0).data.topk(opt.k) # -> [[1, 3], [1, 3]]
+
     # elif opt.nmt_model_type == 'align_and_translate':
     #     e_output, hidden = model.encoder(src)
     
@@ -47,10 +49,14 @@ def init_vars(src, model, SRC, TRG, opt):
     
     return outputs, e_outputs, log_scores
 
-def k_best_outputs(outputs, out, log_scores, i, k, TRG):
+def k_best_outputs(outputs, out, log_scores, i, k, TRG, SRC):
     
     probs, ix = out[:, -1].data.topk(k) # get most probable in softmax output
-    log_probs = torch.Tensor([math.log(p) for p in probs.data.view(-1)]).view(k, -1) + log_scores.transpose(0,1) # calculate log of probable translations
+    try:
+        log_probs = torch.Tensor([math.log(p) for p in probs.data.view(-1)]).view(k, -1) + log_scores.transpose(0,1) # calculate log of probable translations
+    except:
+        a = 1
+        # import ipdb; ipdb.set_trace()
     k_probs, k_ix = log_probs.view(-1).topk(k)
     
     row = k_ix // k # get rows of most probable translations
@@ -68,8 +74,10 @@ def k_best_outputs(outputs, out, log_scores, i, k, TRG):
 
 def beam_search(src, model, SRC, TRG, opt):
     eos_tok = TRG.vocab.stoi['<eos>']
+    pad_tok = SRC.vocab.stoi['<pad>']
     ind = None
     if opt.nmt_model_type == 'rnn_naive_model':
+        src = torch.cat((src, torch.full((1, opt.max_len - src.shape[1]), pad_tok)), dim=1)
         outputs, encoder_outputs, log_scores = init_vars(src, model, SRC, TRG, opt)
         encoder_hidden = encoder_outputs
         decoder_hidden = encoder_hidden
@@ -89,7 +97,7 @@ def beam_search(src, model, SRC, TRG, opt):
             decoder_input[:, :i] = outputs[:, :i]
             # OPTION 2 - input a tensor of size src.shape[1] and fill up the other numbers with <unk>
             for j in range(opt.k):
-                out_piece, decoder_hidden_piece = model.decoder(decoder_input[j, :].unsqueeze(0), 
+                out_piece, decoder_hidden_piece = model.decoder(decoder_input[j, :], 
                                             decoder_hidden[j, :].unsqueeze(0), encoder_outputs[j, :].unsqueeze(0))
                 if j == 0:
                     out = out_piece[:i, :].unsqueeze(0)
@@ -99,7 +107,7 @@ def beam_search(src, model, SRC, TRG, opt):
                     decoder_hidden_carry = torch.cat([decoder_hidden_carry, decoder_hidden_piece[:i, :]], dim=0)
             decoder_hidden = decoder_hidden_carry
     
-        outputs, log_scores = k_best_outputs(outputs, out, log_scores, i, opt.k, TRG) # (torch.Size([3, 100]), torch.Size([3, 2, 11436]))
+        outputs, log_scores = k_best_outputs(outputs, out, log_scores, i, opt.k, TRG, SRC) # (torch.Size([3, 100]), torch.Size([3, 2, 11436]))
         
         ones = (outputs==eos_tok).nonzero() # Occurrences of end symbols for all input sentences.
         sentence_lengths = torch.zeros(len(outputs), dtype=torch.long).to(opt.device)

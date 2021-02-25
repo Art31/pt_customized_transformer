@@ -93,8 +93,12 @@ def create_fields(opt):
 
     return(SRC, TRG)
 
-def generate_tabular_dataset(opt):
-    raw_data = {'src' : [line for line in opt.src_data], 'trg': [line for line in opt.trg_data]}
+def generate_tabular_dataset(opt, valid=False):
+    if valid == False:
+        raw_data = {'src' : [line for line in opt.src_data], 'trg': [line for line in opt.trg_data]}
+    else:
+        raw_data = {'src' : [line for line in opt.src_val_data], 'trg': [line for line in opt.trg_val_data]}
+
     df = pd.DataFrame(raw_data, columns=["src", "trg"])
     
     mask = (df['src'].str.count(' ') < opt.max_strlen) & (df['trg'].str.count(' ') < opt.max_strlen) # filtering senteces with more words than max_strlen
@@ -110,7 +114,7 @@ def create_dataset(opt, SRC, TRG, word_emb):
     timer = Timer()
     print("creating dataset and iterator... ")
     train = generate_tabular_dataset(opt)
-    valid = generate_tabular_dataset(opt)    
+    valid = generate_tabular_dataset(opt, valid=True)
 
     if opt.use_dynamic_batch == True:
         train_iter, valid_iter = MyIterator.splits((train, valid), batch_size=opt.batchsize, device=opt.device,
@@ -146,6 +150,7 @@ def create_dataset(opt, SRC, TRG, word_emb):
     opt.src_pad = SRC.vocab.stoi['<pad>'] # get number of pad token, used for masking 
     opt.trg_pad = TRG.vocab.stoi['<pad>'] # Pad the text so that all the sequences are the same length, so you can process them in batch
     opt.trg_sos = TRG.vocab.stoi['<sos>']
+    opt.SRC = SRC; opt.TRG = TRG
 
     opt.train_len = get_len(train_iter)
     timer.print_time('create_dataset')
