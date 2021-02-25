@@ -63,8 +63,8 @@ def k_best_outputs(outputs, out, log_scores, i, k, TRG, SRC):
     col = k_ix % k # get columns of most probable translations
 
     next_config = torch.cat([outputs[row, :i], ix[row, col].unsqueeze(1)], dim=1)
-    print(f"Outputs now are\n{outputs}\n will become\n{next_config}")
-    print(f"Outputs now are\n{[[TRG.vocab.itos[ind] for ind in sent] for sent in outputs.tolist()]}\n will become\n{[[TRG.vocab.itos[ind] for ind in sent] for sent in next_config.tolist()]}")
+    # print(f"Outputs now are\n{outputs}\n will become\n{next_config}")
+    # print(f"Outputs now are\n{[[TRG.vocab.itos[ind] for ind in sent] for sent in outputs.tolist()]}\n will become\n{[[TRG.vocab.itos[ind] for ind in sent] for sent in next_config.tolist()]}")
     outputs[:, :i] = outputs[row, :i]
     outputs[:, i] = ix[row, col]
 
