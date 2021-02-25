@@ -77,7 +77,8 @@ def beam_search(src, model, SRC, TRG, opt):
     pad_tok = SRC.vocab.stoi['<pad>']
     ind = None
     if opt.nmt_model_type == 'rnn_naive_model':
-        src = torch.cat((src, torch.full((1, opt.max_len - src.shape[1]), pad_tok)), dim=1)
+        tensor_to_fill_max_len = torch.full((1, opt.max_len - src.shape[1]), pad_tok).to(opt.device)
+        src = torch.cat((src, tensor_to_fill_max_len), dim=1)
         outputs, encoder_outputs, log_scores = init_vars(src, model, SRC, TRG, opt)
         encoder_hidden = encoder_outputs
         decoder_hidden = encoder_hidden

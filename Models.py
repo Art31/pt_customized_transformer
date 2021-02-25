@@ -377,7 +377,10 @@ def get_model(opt, src_vocab, trg_vocab, word_emb):
     if opt.load_weights is not None:
         print(f"loading pretrained weights from {opt.load_weights}/model_weights...")
         # model = nn.DataParallel(model)
-        model.load_state_dict(torch.load(f'{opt.load_weights}/model_weights'))
+        if opt.device == torch.device("cpu"):
+            model.load_state_dict(torch.load(f'{opt.load_weights}/model_weights', map_location=torch.device('cpu')))
+        else:
+            model.load_state_dict(torch.load(f'{opt.load_weights}/model_weights'))
     elif opt.word_embedding_type is None:
         for p in model.parameters():
             if p.dim() > 1:
