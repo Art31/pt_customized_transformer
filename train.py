@@ -53,9 +53,8 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
         model.train()
         total_loss = 0
 
-        if opt.floyd is False:
-            print("   %dm: epoch %d [%s]  %d%%  loss = %s | valid_loss = %s" %\
-            ((time.time() - start)//60, epoch + 1, "".join(' '*20), 0, '...', '...'), end='\r')
+        print("   %dm: epoch %d [%s]  %d%%  loss = %s | valid_loss = %s" %\
+        ((time.time() - start)//60, epoch + 1, "".join(' '*20), 0, '...', '...'), end='\r')
         
         if opt.checkpoint > 0:
             torch.save(model.state_dict(), 'weights/model_weights')
@@ -104,12 +103,8 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
             if (i + 1) % opt.printevery == 0:
                 p = int(100 * (i + 1) / opt.train_len)
                 avg_train_loss = total_loss/opt.printevery
-                if opt.floyd is False:
-                   print("   %dm: epoch %d [%s%s]  %d%%  loss = %.3f" %\
-                   ((time.time() - start)//60, epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_train_loss), end='\r')
-                else:
-                   print("   %dm: epoch %d [%s%s]  %d%%  loss = %.3f" %\
-                   ((time.time() - start)//60, epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_train_loss))
+                print("   %dm: epoch %d [%s%s]  %d%%  loss = %.3f" %\
+                ((time.time() - start)//60, epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_train_loss), end='\r')
                 total_loss = 0
             
             if opt.checkpoint > 0 and ((time.time()-cptime)//60) // opt.checkpoint >= 1:
@@ -117,8 +112,14 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
                 cptime = time.time()
    
         avg_valid_loss = evaluate(model, opt.valid, criterion, opt) 
-        print("%dm: epoch %d [%s%s]  %d%%  loss = %.3f\nepoch %d complete, loss = %.03f | valid_loss = %.3f" %\
-        ((time.time() - start)//60, epoch + 1, "".join('#'*(100//5)), "".join(' '*(20-(100//5))), 100, avg_train_loss, epoch + 1, avg_train_loss, avg_valid_loss))
+        epoch_mins = round((time.time() - start)//60)
+        bar_begin = "".join('#'*(100//5))
+        bar_end = "".join(' '*(20-(100//5)))
+        print(f'{epoch_mins:d}m: Epoch{epoch + 1} [{bar_begin}{bar_end}] {100}%')
+        print(f'Train Loss: {avg_train_loss:.3f} | Train PPL: {math.exp(avg_train_loss):7.3f}')
+        print(f'Val. Loss: {avg_valid_loss:.3f}  | Val. PPL: {math.exp(avg_valid_loss):7.3f}')
+        # print("%dm: epoch %d [%s%s]  %d%%  loss = %.3f\nepoch %d complete, loss = %.03f | valid_loss = %.3f" %\
+        # ((time.time() - start)//60, epoch + 1, "".join('#'*(100//5)), "".join(' '*(20-(100//5))), 100, avg_train_loss, epoch + 1, avg_train_loss, avg_valid_loss))
 
 def main():
 
@@ -152,7 +153,6 @@ def main():
     parser.add_argument('-load_weights')
     parser.add_argument('-create_valset', action='store_true')
     parser.add_argument('-max_strlen', type=int, default=100) # max number of spaces per sentence
-    parser.add_argument('-floyd', action='store_true')
     parser.add_argument('-checkpoint', type=int, default=0)
     parser.add_argument('-decoder_extra_layers', type=int, default=0)
     parser.add_argument('-nmt_model_type', type=str, default='transformer')
@@ -167,7 +167,7 @@ def main():
     #         self.src_data = 'data/port_train.txt'
     #         self.src_val_data = 'data/port_dev.txt'
     #         self.trg_data = 'data/eng_train.txt'
-    #         self.trg_val_data = 'data/eng_train.txt'
+    #         self.trg_val_data = 'data/eng_dev.txt'
     #         self.src_lang = 'pt'
     #         self.trg_lang = 'en'
     #         self.no_cuda = True
@@ -183,7 +183,6 @@ def main():
     #         self.load_weights = None 
     #         self.create_valset = False 
     #         self.max_strlen = 100 
-    #         self.floyd = False 
     #         self.checkpoint = 1
     #         self.decoder_extra_layers = 0
     #         self.nmt_model_type = 'rnn_naive_model' # 'transformer', 'rnn_naive_model', 'align_and_translate' ...
@@ -226,15 +225,14 @@ def main():
     if opt.checkpoint > 0:
         print("model weights will be saved every %d minutes and at end of epoch to directory weights/"%(opt.checkpoint))
     
-    if opt.load_weights is not None and opt.floyd is not None:
+    if opt.load_weights is not None:
         os.mkdir('weights')
         pickle.dump(SRC, open('weights/SRC.pkl', 'wb'))
         pickle.dump(TRG, open('weights/TRG.pkl', 'wb'))
     
     train_model(model, opt)
 
-    if opt.floyd is False:
-        promptNextAction(model, opt, SRC, TRG)
+    promptNextAction(model, opt, SRC, TRG)
 
 def yesno(response):
     while True:

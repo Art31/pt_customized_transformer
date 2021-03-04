@@ -166,7 +166,7 @@ class DecoderRNN(nn.Module):
         #hidden = [1, batch_size, d_model]
         #context = [1, batch_size, d_model]
         # input = input.unsqueeze(0)
-        embedded = self.embedding(input) # [1, 1] -> [1, 1, 300]
+        embedded = self.embedding(input.unsqueeze(0)) # [1, 1] -> [1, 1, 300]
         #input = [1, batch_size]
         if self.opt.nmt_model_type == 'rnn_naive_model':
             #embedded = [1, batch_size, d_model]
@@ -203,10 +203,6 @@ class DecoderRNN(nn.Module):
 # usar https://github.com/bentrevett/pytorch-seq2seq/blob/master/2%20-%20Learning%20Phrase%20Representations%20using%20RNN%20Encoder-Decoder%20for%20Statistical%20Machine%20Translation.ipynb
 class NaiveModel(nn.Module):
     # hidden_size = d_model !
-    # entender se precisa colocar input_lang.n_words
-    # encoder1 = EncoderRNN(input_lang.n_words, hidden_size).to(device)
-    # attn_decoder1 = AttnDecoderRNN(hidden_size, output_lang.n_words, dropout_p=0.1).to(device)
-    # def __init__(self, src_vocab, trg_vocab, d_model, dropout, device, max_length):
     def __init__(self, encoder, decoder, opt):
         super().__init__()
         self.device = opt.device
@@ -260,9 +256,9 @@ class NaiveModel(nn.Module):
             if self.opt.nmt_model_type == 'rnn_naive_model':
                 #insert input token embedding, previous hidden state and the context state
                 #receive output tensor (predictions) and new hidden state
-                output, hidden = self.decoder(input.unsqueeze(0), hidden, context) # [[1024], [1, 1024, 300], [1, 1024, 300]] -> [[1024, 11436], [1, 1024, 300])]
+                output, hidden = self.decoder(input, hidden, context) # [[1024], [1, 1024, 300], [1, 1024, 300]] -> [[1024, 11436], [1, 1024, 300])]
             elif self.opt.nmt_model_type == 'align_and_translate':
-                output, hidden = self.decoder(input.unsqueeze(0), hidden, encoder_outputs)
+                output, hidden = self.decoder(input, hidden, encoder_outputs)
             
             #place predictions in a tensor holding predictions for each token
             outputs[t] = output
@@ -271,7 +267,8 @@ class NaiveModel(nn.Module):
             # teacher_force = random.random() < teacher_forcing_ratio
             
             #get the highest predicted token from our predictions
-            top1 = output.argmax(1) 
+            top1 = output.argmax(1)
+            # top2 = output.max(1)[1]
             
             #if teacher forcing, use actual next token as next input
             #if not, use predicted token
@@ -361,13 +358,13 @@ def get_model(opt, src_vocab, trg_vocab, word_emb):
         fields = {'SRC': opt.SRC, 'TRG': opt.TRG}
         model = Transformer(src_vocab, trg_vocab, opt.d_model, opt.n_layers, opt.heads, opt.dropout, opt.decoder_extra_layers, fields, word_emb, opt)
     elif opt.nmt_model_type == 'rnn_naive_model': 
-        encoder = Seq2SeqEncoder(src_vocab, 256, 512, 0.5)
-        decoder = Seq2SeqDecoder(trg_vocab, 256, 512, 0.5)
-        model = Seq2Seq(encoder, decoder, opt.device) # (opt.d_model, opt.dropout, opt.device, opt.max_strlen)
+        # encoder = Seq2SeqEncoder(src_vocab, 256, 512, 0.5)
+        # decoder = Seq2SeqDecoder(trg_vocab, 256, 512, 0.5)
+        # model = Seq2Seq(encoder, decoder, opt.device).to(device) # (opt.d_model, opt.dropout, opt.device, opt.max_strlen)
 
-        # encoder = EncoderRNN(src_vocab, opt.d_model, opt.SRC, word_emb, opt)
-        # decoder = DecoderRNN(opt.d_model, trg_vocab, opt.TRG, word_emb, opt)
-        # model = NaiveModel(encoder, decoder, opt) # (opt.d_model, opt.dropout, opt.device, opt.max_strlen)
+        encoder = EncoderRNN(src_vocab, opt.d_model, opt.SRC, word_emb, opt)
+        decoder = DecoderRNN(opt.d_model, trg_vocab, opt.TRG, word_emb, opt)
+        model = NaiveModel(encoder, decoder, opt).to(opt.device) # (opt.d_model, opt.dropout, opt.device, opt.max_strlen)
     elif opt.nmt_model_type == 'align_and_translate': 
         attn = Attention(opt.d_model, 32)
         encoder = EncoderRNN(src_vocab, opt.d_model, opt.SRC, word_emb, opt)

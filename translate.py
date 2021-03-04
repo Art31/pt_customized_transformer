@@ -37,7 +37,7 @@ def translate_sentence(sentence, model, opt, SRC, TRG):
     sentence = SRC.preprocess(sentence)
     import ipdb; ipdb.set_trace()
     for tok in sentence:
-        if SRC.vocab.stoi[tok] != 0 or opt.floyd == True:
+        if SRC.vocab.stoi[tok] != 0:
             indexed.append(SRC.vocab.stoi[tok])
         else:
             indexed.append(0)
