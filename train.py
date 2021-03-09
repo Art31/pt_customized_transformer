@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from Optim import CosineWithRestarts
 from Batch import create_masks
 from gensim.models import KeyedVectors
+from collections import Counter
 import dill as pickle
 
 def early_stopping_criterion(valid_metric_list, window_size=5, threshold=0.9):
