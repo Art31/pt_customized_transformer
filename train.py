@@ -15,9 +15,9 @@ def early_stopping_criterion(valid_metric_list, window_size=5, threshold=0.9):
     Validationl loss increase along 90% of epochs is enough to activate early stop
     '''
     for ind, val in enumerate(valid_metric_list):
-        if len(result) > 1:
-            steps_to_look_back = min(len(result), window_size+1)
-            sublist = result[-steps_to_look_back:]
+        if len(valid_metric_list) > 1:
+            steps_to_look_back = min(len(valid_metric_list), window_size+1)
+            sublist = valid_metric_list[-steps_to_look_back:]
             conditions = [item > sublist[0] for item in sublist[1:]]
             worse_losses = Counter(conditions)
             for k, v in worse_losses.items():
@@ -27,6 +27,7 @@ def early_stopping_criterion(valid_metric_list, window_size=5, threshold=0.9):
                 print(f"Previous losses: {sublist}\n")
                 return True 
             else:
+                print(f"Previous losses: {sublist}\n")
                 return False
 
 def evaluate(model, iterator, criterion, opt):
