@@ -10,6 +10,25 @@ from Batch import create_masks
 from gensim.models import KeyedVectors
 import dill as pickle
 
+def early_stopping_criterion(valid_metric_list, window_size=5, threshold=0.9):
+    '''
+    Validationl loss increase along 90% of epochs is enough to activate early stop
+    '''
+    for ind, val in enumerate(valid_metric_list):
+        if len(result) > 1:
+            steps_to_look_back = min(len(result), window_size+1)
+            sublist = result[-steps_to_look_back:]
+            conditions = [item > sublist[0] for item in sublist[1:]]
+            worse_losses = Counter(conditions)
+            for k, v in worse_losses.items():
+                worse_losses[k] = v/(steps_to_look_back-1)
+            if worse_losses[True] > threshold:
+                print(f"\nWorse than first loss {conditions}")
+                print(f"Previous losses: {sublist}\n")
+                return True 
+            else:
+                return False
+
 def evaluate(model, iterator, criterion, opt):
     
     model.eval()
@@ -42,7 +61,7 @@ def evaluate(model, iterator, criterion, opt):
     return epoch_loss / len(iterator)
 
 def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
-    
+    val_loss_list = []
     print("training model...")
     start = time.time()
     if opt.checkpoint > 0:
@@ -112,6 +131,12 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
                 cptime = time.time()
    
         avg_valid_loss = evaluate(model, opt.valid, criterion, opt) 
+        val_loss_list.append(math.exp(avg_valid_loss))
+        early_stop_flag = early_stopping_criterion(val_loss_list)
+        if early_stop_flag == True: 
+            break 
+        else: 
+            pass
         epoch_mins = round((time.time() - start)//60)
         bar_begin = "".join('#'*(100//5))
         bar_end = "".join(' '*(20-(100//5)))
