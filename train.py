@@ -13,7 +13,7 @@ import dill as pickle
 
 def early_stopping_criterion(valid_metric_list, window_size=5, threshold=0.9):
     '''
-    Validationl loss increase along 90% of epochs is enough to activate early stop
+    Validation loss increase along 90% of epochs is enough to activate early stop
     '''
     for ind, val in enumerate(valid_metric_list):
         if len(valid_metric_list) > 1:
@@ -278,33 +278,32 @@ def promptNextAction(model, opt, SRC, TRG):
         dst = 'weights'
 
     while True:
-        save = yesno(input(f"{pd.to_datetime('today')}: training complete, save results? [y/n] : "))
-        if save == 'y':
-            while True:
-                if saved_once != 0:
-                    res = yesno("save to same folder? [y/n] : ")
-                    if res == 'y':
-                        break
-                dst = input('enter folder name to create for weights (no spaces) : ')
-                if ' ' in dst or len(dst) < 1 or len(dst) > 30:
-                    dst = input("name must not contain spaces and be between 1 and 30 characters length, enter again : ")
-                else:
-                    try:
-                        os.mkdir(dst)
-                    except:
-                        res= yesno(input(dst + " already exists, use anyway? [y/n] : "))
-                        if res == 'n':
-                            continue
+        print(f"{pd.to_datetime('today')}: training complete, saving results...")
+        while True:
+            if saved_once != 0:
+                res = yesno("save to same folder? [y/n] : ")
+                if res == 'y':
                     break
-            
-            print("saving weights to " + dst + "/...")
-            torch.save(model.state_dict(), f'{dst}/model_weights')
-            if saved_once == 0:
-                pickle.dump(SRC, open(f'{dst}/SRC.pkl', 'wb'))
-                pickle.dump(TRG, open(f'{dst}/TRG.pkl', 'wb'))
-                saved_once = 1
-            
-            print("weights and field pickles saved to " + dst)
+            dst = input('enter folder name to create for weights (no spaces) : ')
+            if ' ' in dst or len(dst) < 1 or len(dst) > 30:
+                dst = input("name must not contain spaces and be between 1 and 30 characters length, enter again : ")
+            else:
+                try:
+                    os.mkdir(dst)
+                except:
+                    res= yesno(input(dst + " already exists, use anyway? [y/n] : "))
+                    if res == 'n':
+                        continue
+                break
+        
+        print("saving weights to " + dst + "/...")
+        torch.save(model.state_dict(), f'{dst}/model_weights')
+        if saved_once == 0:
+            pickle.dump(SRC, open(f'{dst}/SRC.pkl', 'wb'))
+            pickle.dump(TRG, open(f'{dst}/TRG.pkl', 'wb'))
+            saved_once = 1
+        
+        print("weights and field pickles saved to " + dst)
 
         res = yesno(input("train for more epochs? [y/n] : "))
         if res == 'y':

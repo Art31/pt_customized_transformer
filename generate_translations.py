@@ -76,48 +76,48 @@ def translate(opt, model, SRC, TRG):
 
 def main():
     
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('-translate_file', required=True)
-    # parser.add_argument('-output', required=True)
-    # parser.add_argument('-load_weights', required=True)
-    # parser.add_argument('-k', type=int, default=3)
-    # parser.add_argument('-max_len', type=int, default=80)
-    # parser.add_argument('-d_model', type=int, default=512)
-    # parser.add_argument('-n_layers', type=int, default=6)
-    # parser.add_argument('-src_lang', required=True)
-    # parser.add_argument('-trg_lang', required=True)
-    # parser.add_argument('-heads', type=int, default=8)
-    # parser.add_argument('-dropout', type=int, default=0.1)
-    # parser.add_argument('-no_cuda', action='store_true')
-    # parser.add_argument('-floyd', action='store_true')
-    # parser.add_argument('-nmt_model_type', type=str, default='transformer')
-    # parser.add_argument('-decoder_extra_layers', type=int, default=0)
-    # parser.add_argument('-word_embedding_type', type=str, default=None)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-translate_file', required=True)
+    parser.add_argument('-output', required=True)
+    parser.add_argument('-load_weights', required=True)
+    parser.add_argument('-k', type=int, default=3)
+    parser.add_argument('-max_len', type=int, default=80)
+    parser.add_argument('-d_model', type=int, default=512)
+    parser.add_argument('-n_layers', type=int, default=6)
+    parser.add_argument('-src_lang', required=True)
+    parser.add_argument('-trg_lang', required=True)
+    parser.add_argument('-heads', type=int, default=8)
+    parser.add_argument('-dropout', type=int, default=0.1)
+    parser.add_argument('-no_cuda', action='store_true')
+    parser.add_argument('-floyd', action='store_true')
+    parser.add_argument('-nmt_model_type', type=str, default='transformer')
+    parser.add_argument('-decoder_extra_layers', type=int, default=0)
+    parser.add_argument('-word_embedding_type', type=str, default=None)
     
-    # opt = parser.parse_args()
-    # print(opt)
+    opt = parser.parse_args()
+    print(opt)
 
-    class InputArgs():
-        def __init__(self):
-            self.translate_file = 'data/port_test.txt'
-            self.output = 'test_translations.txt' # 'rnn_naive_model_translations.txt' # 'vanilla_transformer.txt' 
-            self.load_weights = 'seq2seq_weights' # 'weights_test' # 'rnn_naive_model' # 'transformer_test'
-            self.src_lang = 'pt'
-            self.trg_lang = 'en'
-            self.no_cuda = True
-            self.d_model = 300 
-            self.heads = 6
-            self.nmt_model_type = 'rnn_naive_model' # 'transformer', 'rnn_naive_model', 'align_and_translate' ...
-            self.word_embedding_type = None # None, 'glove' or 'fast_text'
-            self.k = 3
-            self.max_len = 100
-            self.dropout = 0.1
-            self.n_layers = 6
-            self.decoder_extra_layers = 0
-            self.floyd = False
-            # self.use_dynamic_batch = None
-    opt = InputArgs()
-    print(opt.__dict__)
+    # class InputArgs():
+    #     def __init__(self):
+    #         self.translate_file = 'data/port_test.txt'
+    #         self.output = 'test_translations.txt' # 'rnn_naive_model_translations.txt' # 'vanilla_transformer.txt' 
+    #         self.load_weights = 'seq2seq_weights' # 'weights_test' # 'rnn_naive_model' # 'transformer_test'
+    #         self.src_lang = 'pt'
+    #         self.trg_lang = 'en'
+    #         self.no_cuda = True
+    #         self.d_model = 300 
+    #         self.heads = 6
+    #         self.nmt_model_type = 'rnn_naive_model' # 'transformer', 'rnn_naive_model', 'align_and_translate' ...
+    #         self.word_embedding_type = None # None, 'glove' or 'fast_text'
+    #         self.k = 3
+    #         self.max_len = 100
+    #         self.dropout = 0.1
+    #         self.n_layers = 6
+    #         self.decoder_extra_layers = 0
+    #         self.floyd = False
+    #         # self.use_dynamic_batch = None
+    # opt = InputArgs()
+    # print(opt.__dict__)
 
     if opt.no_cuda is False:
         assert torch.cuda.is_available()
