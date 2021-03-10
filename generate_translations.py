@@ -101,7 +101,7 @@ def main():
     #     def __init__(self):
     #         self.translate_file = 'data/port_test.txt'
     #         self.output = 'test_translations.txt' # 'rnn_naive_model_translations.txt' # 'vanilla_transformer.txt' 
-    #         self.load_weights = 'seq2seq_weights' # 'weights_test' # 'rnn_naive_model' # 'transformer_test'
+    #         self.load_weights = 'naive_model_new_approach' # 'weights_test' # 'rnn_naive_model' # 'transformer_test'
     #         self.src_lang = 'pt'
     #         self.trg_lang = 'en'
     #         self.no_cuda = True

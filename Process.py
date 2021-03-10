@@ -4,7 +4,7 @@ import torch.nn as nn
 from torchtext import data
 from Tokenize import tokenize
 from Batch import MyIterator, batch_size_fn
-import os, time, math, shutil
+import os, time, math, shutil, sys, traceback
 import dill as pickle
 from tqdm import tqdm
 
@@ -86,6 +86,7 @@ def create_fields(opt):
             SRC = pickle.load(open(f'{opt.load_weights}/SRC.pkl', 'rb'))
             TRG = pickle.load(open(f'{opt.load_weights}/TRG.pkl', 'rb'))
         except:
+            traceback.print_exc(file=sys.stdout)
             print("error opening SRC.pkl and TXT.pkl field files, please ensure they are in " + opt.load_weights + "/")
             quit()
         
@@ -112,7 +113,7 @@ def generate_tabular_dataset(opt, valid=False):
 
 def create_dataset(opt, SRC, TRG, word_emb):
     timer = Timer()
-    print("creating dataset and iterator... ")
+    print(f"{pd.to_datetime('today')}: creating dataset and iterator... ")
     train = generate_tabular_dataset(opt)
     valid = generate_tabular_dataset(opt, valid=True)
 

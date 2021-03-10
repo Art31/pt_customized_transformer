@@ -52,10 +52,10 @@ def init_vars(src, model, SRC, TRG, opt):
 def k_best_outputs(outputs, out, log_scores, i, k, TRG, SRC):
     
     probs, ix = out[:, -1].data.topk(k) # get most probable in softmax output
-    try:
-        log_probs = torch.Tensor([math.log(p) for p in probs.data.view(-1)]).view(k, -1) + log_scores.transpose(0,1) # calculate log of probable translations
-    except:
-        a = 1
+    # try:
+    log_probs = torch.Tensor([math.log(p) for p in probs.data.view(-1)]).view(k, -1) + log_scores.transpose(0,1) # calculate log of probable translations
+    # except:
+    #     a = 1
         # import ipdb; ipdb.set_trace()
     k_probs, k_ix = log_probs.view(-1).topk(k)
     
