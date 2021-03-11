@@ -101,12 +101,12 @@ def main():
     #     def __init__(self):
     #         self.translate_file = 'data/port_test.txt'
     #         self.output = 'test_translations.txt' # 'rnn_naive_model_translations.txt' # 'vanilla_transformer.txt' 
-    #         self.load_weights = 'naive_model_new_approach' # 'weights_test' # 'rnn_naive_model' # 'transformer_test'
+    #         self.load_weights = 'naive_dmodel512' # 'weights_test' # 'rnn_naive_model' # 'transformer_test'
     #         self.src_lang = 'pt'
     #         self.trg_lang = 'en'
     #         self.no_cuda = True
-    #         self.d_model = 300 
-    #         self.heads = 6
+    #         self.d_model = 512 # 300 
+    #         self.heads = 8 # 6
     #         self.nmt_model_type = 'rnn_naive_model' # 'transformer', 'rnn_naive_model', 'align_and_translate' ...
     #         self.word_embedding_type = None # None, 'glove' or 'fast_text'
     #         self.k = 3

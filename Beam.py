@@ -1,7 +1,7 @@
 import torch, random
 from Batch import nopeak_mask
 import torch.nn.functional as F
-import math
+import math, sys, traceback
 
 
 def init_vars(src, model, SRC, TRG, opt):
@@ -52,11 +52,12 @@ def init_vars(src, model, SRC, TRG, opt):
 def k_best_outputs(outputs, out, log_scores, i, k, TRG, SRC):
     
     probs, ix = out[:, -1].data.topk(k) # get most probable in softmax output
-    # try:
-    log_probs = torch.Tensor([math.log(p) for p in probs.data.view(-1)]).view(k, -1) + log_scores.transpose(0,1) # calculate log of probable translations
-    # except:
-    #     a = 1
-        # import ipdb; ipdb.set_trace()
+    try:
+        log_probs = torch.Tensor([math.log(p) for p in probs.data.view(-1)]).view(k, -1) + log_scores.transpose(0,1) # calculate log of probable translations
+    except:
+        traceback.print_exc(file=sys.stdout)
+        print(f"These are the probabilities before applying log: {[p for p in probs.data.view(-1)]}")
+        import ipdb; ipdb.set_trace()
     k_probs, k_ix = log_probs.view(-1).topk(k)
     
     row = k_ix // k # get rows of most probable translations
@@ -106,6 +107,7 @@ def beam_search(src, model, SRC, TRG, opt):
                 else:
                     out = torch.cat([out, out_piece[:i, :].unsqueeze(0)], dim=0) # final shape: [src.shape[1]*3, vocab_size]
                     decoder_hidden_carry = torch.cat([decoder_hidden_carry, decoder_hidden_piece[:i, :]], dim=0)
+            out = F.softmax(out, dim=-1)
             decoder_hidden = decoder_hidden_carry
     
         outputs, log_scores = k_best_outputs(outputs, out, log_scores, i, opt.k, TRG, SRC) # (torch.Size([3, 100]), torch.Size([3, 2, 11436]))
