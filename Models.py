@@ -358,13 +358,13 @@ def get_model(opt, src_vocab, trg_vocab, word_emb):
         fields = {'SRC': opt.SRC, 'TRG': opt.TRG}
         model = Transformer(src_vocab, trg_vocab, opt.d_model, opt.n_layers, opt.heads, opt.dropout, opt.decoder_extra_layers, fields, word_emb, opt)
     elif opt.nmt_model_type == 'rnn_naive_model': 
-        # encoder = Seq2SeqEncoder(src_vocab, 256, 512, 0.5)
-        # decoder = Seq2SeqDecoder(trg_vocab, 256, 512, 0.5)
-        # model = Seq2Seq(encoder, decoder, opt.device).to(device) # (opt.d_model, opt.dropout, opt.device, opt.max_strlen)
+        encoder = Seq2SeqEncoder(src_vocab, 256, 512, 0.5)
+        decoder = Seq2SeqDecoder(trg_vocab, 256, 512, 0.5)
+        model = Seq2Seq(encoder, decoder, opt.device).to(device) # (opt.d_model, opt.dropout, opt.device, opt.max_strlen)
 
-        encoder = EncoderRNN(src_vocab, opt.d_model, opt.SRC, word_emb, opt)
-        decoder = DecoderRNN(opt.d_model, trg_vocab, opt.TRG, word_emb, opt)
-        model = NaiveModel(encoder, decoder, opt).to(opt.device) # (opt.d_model, opt.dropout, opt.device, opt.max_strlen)
+        # encoder = EncoderRNN(src_vocab, opt.d_model, opt.SRC, word_emb, opt)
+        # decoder = DecoderRNN(opt.d_model, trg_vocab, opt.TRG, word_emb, opt)
+        # model = NaiveModel(encoder, decoder, opt).to(opt.device) # (opt.d_model, opt.dropout, opt.device, opt.max_strlen)
     elif opt.nmt_model_type == 'align_and_translate': 
         attn = Attention(opt.d_model, 32)
         encoder = EncoderRNN(src_vocab, opt.d_model, opt.SRC, word_emb, opt)
