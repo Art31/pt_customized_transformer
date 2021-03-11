@@ -360,7 +360,7 @@ def get_model(opt, src_vocab, trg_vocab, word_emb):
     elif opt.nmt_model_type == 'rnn_naive_model': 
         encoder = Seq2SeqEncoder(src_vocab, 256, 512, 0.5)
         decoder = Seq2SeqDecoder(trg_vocab, 256, 512, 0.5)
-        model = Seq2Seq(encoder, decoder, opt.device).to(device) # (opt.d_model, opt.dropout, opt.device, opt.max_strlen)
+        model = Seq2Seq(encoder, decoder, opt.device).to(opt.device) # (opt.d_model, opt.dropout, opt.device, opt.max_strlen)
 
         # encoder = EncoderRNN(src_vocab, opt.d_model, opt.SRC, word_emb, opt)
         # decoder = DecoderRNN(opt.d_model, trg_vocab, opt.TRG, word_emb, opt)
