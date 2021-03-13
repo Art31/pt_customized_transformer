@@ -76,6 +76,7 @@ class Decoder(nn.Module):
         self.emb_dim = emb_dim
         self.hid_dim = hid_dim
         self.output_dim = output_dim
+        self.opt = opt
         
         if opt.word_embedding_type is None:
             # self.embedding = nn.Embedding(output_size, d_model)
