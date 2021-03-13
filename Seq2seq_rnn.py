@@ -68,8 +68,9 @@ class Decoder(nn.Module):
                  hid_dim: int, 
                  field, 
                  word_emb_model, 
-                 opt, 
-                 attention=None):
+                 opt
+                #  ,attention=None
+                 ):
         super().__init__()
 
         self.emb_dim = emb_dim
@@ -88,6 +89,9 @@ class Decoder(nn.Module):
             self.out = nn.Linear(emb_dim + hid_dim * 2, output_dim)
             self.dropout = nn.Dropout(dropout)
         # elif self.opt.nmt_model_type == 'align_and_translate':
+            # self.attention = attention
+            # self.rnn = nn.GRU((d_model * 2) + d_model, d_model)
+            # self.fc_out = nn.Linear(self.attention.attn_in + d_model, output_size)
         
     def forward(self, 
                 input: Tensor, 

@@ -1,5 +1,4 @@
 import argparse
-from google.cloud import translate_v2 as translate
 import six
 from tqdm import tqdm
 import pandas as pd
@@ -45,6 +44,7 @@ def translate_sentences(text_list, output):
     Target must be an ISO 639-1 language code.
     See https://g.co/cloud/translate/v2/translate-reference#supported_languages
     """
+    from google.cloud import translate_v2 as translate
     # RODAR export GOOGLE_APPLICATION_CREDENTIALS="/home/arthurtelles/gtranslate-api-290022-4899f0c9d3f7.json"
     translate_client = translate.Client()
 
@@ -78,11 +78,11 @@ print(f'Inputs: {opt}\n')
 
 # class InputArgs():
 #     def __init__(self):
-#         self.input_file = 'transformer_translations.txt'
+#         self.input_file = 'seq2seq_test_translations2.txt'
 #         self.reference_file = 'data/eng_test.txt' # 'rnn_naive_model_translations.txt' # 'vanilla_transformer.txt' 
-#         self.bleu_output = 'teste_bleu.txt' # 'weights_test' # 'rnn_naive_model' # 'transformer_test'
+#         self.bleu_output = 'seq2seq_test_bleu2.txt' # 'weights_test' # 'rnn_naive_model' # 'transformer_test'
 #         self.google_translate_api = False
-#         self.output_translations_csv = True
+#         self.output_translations_csv = 'seq2seq_test_bleu2.csv'
 # opt = InputArgs()
 # print(opt.__dict__)
 
