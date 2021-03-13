@@ -35,7 +35,7 @@ class Encoder(nn.Module):
         
         if opt.nmt_model_type == 'rnn_naive_model':
             self.rnn = nn.GRU(emb_dim, hid_dim)
-            self.dropout = nn.Dropout(dropout)
+            self.dropout = nn.Dropout(opt.dropout)
         # elif opt.nmt_model_type == 'align_and_translate':
         #     self.rnn = nn.GRU(emb_dim, hid_dim, bidirectional = True)
         #     self.fc = nn.Linear(d_model * 2, d_model)
@@ -87,7 +87,7 @@ class Decoder(nn.Module):
         if self.opt.nmt_model_type == 'rnn_naive_model':
             self.rnn = nn.GRU(emb_dim + hid_dim, hid_dim)
             self.out = nn.Linear(emb_dim + hid_dim * 2, output_dim)
-            self.dropout = nn.Dropout(dropout)
+            self.dropout = nn.Dropout(opt.dropout)
         # elif self.opt.nmt_model_type == 'align_and_translate':
             # self.attention = attention
             # self.rnn = nn.GRU((d_model * 2) + d_model, d_model)
