@@ -62,7 +62,7 @@ def evaluate(model, iterator, criterion, opt):
         
     return epoch_loss / len(iterator)
 
-def train_rnn(model, iterator, optimizer, criterion, clip):
+def train_rnn(model, iterator, optimizer, criterion, clip, opt):
     
     model.train()
     
@@ -170,7 +170,7 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
                     ((time.time() - start)//60, epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_train_loss), end='\r')
                     total_loss = 0
         else:
-            total_loss = train_rnn(model, opt.train, opt.optimizer, criterion, 1)
+            total_loss = train_rnn(model, opt.train, opt.optimizer, criterion, 1, opt)
 
         if opt.SGDR == True: 
             opt.sched.step()
