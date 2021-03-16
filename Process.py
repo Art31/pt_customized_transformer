@@ -16,6 +16,7 @@ class Timer():
     def print_time(self, function_name):
         now = time.time()
         minutes = math.floor((now - self.i_t)/60)
+        print(f"{pd.to_datetime('today')}")
         print(f"\n|{function_name}| Total Elapsed Time: {minutes} minutes and {now - self.i_t - minutes*60:.2f} seconds.\n")
 
 def embedding_to_torchtext_vocab_translator(field, model):
