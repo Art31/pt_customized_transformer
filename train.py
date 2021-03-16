@@ -98,6 +98,13 @@ def train_rnn(model, iterator, optimizer, criterion, clip):
         optimizer.step()
         
         epoch_loss += loss.item()
+
+        if (i + 1) % opt.printevery == 0:
+            p = int(100 * (i + 1) / opt.train_len)
+            avg_train_loss = total_loss/opt.printevery
+            print("   %dm: epoch %d [%s%s]  %d%%  loss = %.3f" %\
+            ((time.time() - start)//60, epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_train_loss), end='\r')
+            total_loss = 0
         
     return epoch_loss
 
@@ -156,17 +163,17 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
                 loss.backward()
                 opt.optimizer.step()
                 total_loss += loss.item()
+                if (i + 1) % opt.printevery == 0:
+                    p = int(100 * (i + 1) / opt.train_len)
+                    avg_train_loss = total_loss/opt.printevery
+                    print("   %dm: epoch %d [%s%s]  %d%%  loss = %.3f" %\
+                    ((time.time() - start)//60, epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_train_loss), end='\r')
+                    total_loss = 0
         else:
             total_loss = train_rnn(model, opt.train, opt.optimizer, criterion, 1)
 
         if opt.SGDR == True: 
             opt.sched.step()
-        if (i + 1) % opt.printevery == 0:
-            p = int(100 * (i + 1) / opt.train_len)
-            avg_train_loss = total_loss/opt.printevery
-            print("   %dm: epoch %d [%s%s]  %d%%  loss = %.3f" %\
-            ((time.time() - start)//60, epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_train_loss), end='\r')
-            total_loss = 0
         
         if opt.checkpoint > 0 and ((time.time()-cptime)//60) // opt.checkpoint >= 1:
             torch.save(model.state_dict(), 'weights/model_weights')
