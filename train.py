@@ -62,8 +62,48 @@ def evaluate(model, iterator, criterion, opt):
         
     return epoch_loss / len(iterator)
 
+def train_rnn(model, iterator, optimizer, criterion, clip):
+    
+    model.train()
+    
+    epoch_loss = 0
+
+    total_len = get_len(iterator)
+    print(f'Iterator has {total_len} batches.')
+    
+    for i, batch in tqdm(enumerate(iterator)):
+        
+        src = batch.src
+        trg = batch.trg
+        
+        optimizer.zero_grad()
+        
+        output = model(src, trg)
+        
+        #trg = [trg sent len, batch size]
+        #output = [trg sent len, batch size, output dim]
+        
+        output = output[1:].view(-1, output.shape[-1])
+        trg = trg[1:].view(-1)
+        
+        #trg = [(trg sent len - 1) * batch size]
+        #output = [(trg sent len - 1) * batch size, output dim]
+        
+        loss = criterion(output, trg)
+        
+        loss.backward()
+        
+        torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
+        
+        optimizer.step()
+        
+        epoch_loss += loss.item()
+        
+    return epoch_loss
+
 def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
     val_loss_list = []
+    early_stopping_epochs = []
     print("training model...")
     start = time.time()
     if opt.checkpoint > 0:
@@ -81,21 +121,21 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
             torch.save(model.state_dict(), 'weights/model_weights')
                     
         print(f"Epoch has {get_len(opt.train)} batches.")
-        for i, batch in tqdm(enumerate(opt.train)): # opt.train = MyIterator
+        if opt.nmt_model_type == 'transformer':
+            for i, batch in tqdm(enumerate(opt.train)): # opt.train = MyIterator
 
-            # [opt.SRC.vocab.itos[i] for i in batch.src[:, 0]] # to query batch words from field
-            if opt.nmt_model_type == 'transformer':
-                # ----- OLD WAY ------ #
-                # src = batch.src.transpose(0,1)
-                # trg = batch.trg.transpose(0,1)
-                # trg_input = trg[:, :-1]
-                # src_mask, trg_mask = create_masks(src, trg_input, opt)
-                # preds = model(src, trg_input, src_mask, trg_mask) # -> [batch_size, sent_len, emb_dim]
-                # ys = trg[:, 1:].contiguous().view(-1) # [batch_size * sent_len]
-                # opt.optimizer.zero_grad()
-                # loss = F.cross_entropy(preds.view(-1, preds.size(-1)), ys, ignore_index=opt.trg_pad)
-                # -------------------- #
-                # NEW WAY
+                # [opt.SRC.vocab.itos[i] for i in batch.src[:, 0]] # to query batch words from field
+                    # ----- OLD WAY ------ #
+                    # src = batch.src.transpose(0,1)
+                    # trg = batch.trg.transpose(0,1)
+                    # trg_input = trg[:, :-1]
+                    # src_mask, trg_mask = create_masks(src, trg_input, opt)
+                    # preds = model(src, trg_input, src_mask, trg_mask) # -> [batch_size, sent_len, emb_dim]
+                    # ys = trg[:, 1:].contiguous().view(-1) # [batch_size * sent_len]
+                    # opt.optimizer.zero_grad()
+                    # loss = F.cross_entropy(preds.view(-1, preds.size(-1)), ys, ignore_index=opt.trg_pad)
+                    # -------------------- #
+                    # NEW WAY
                 src = batch.src.transpose(0,1) # do we really need the transpose?
                 trg = batch.trg.transpose(0,1) # do we really need the transpose?
                 trg_input = trg[:, :-1]
@@ -105,40 +145,43 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
                 output = output.contiguous().view(-1, output.shape[-1])
                 trg = trg[:,1:].contiguous().view(-1)
                 loss = criterion(output, trg)
-            else:
-                src = batch.src
-                trg = batch.trg
-                opt.optimizer.zero_grad()
-                output = model(src, trg)
-                output = output[1:].view(-1, output.shape[-1])
-                trg = trg[1:].view(-1)
-                loss = criterion(output, trg)
-            loss.backward()
-            opt.optimizer.step()
+                # else:
+                #     src = batch.src
+                #     trg = batch.trg
+                #     opt.optimizer.zero_grad()
+                #     output = model(src, trg)
+                #     output = output[1:].view(-1, output.shape[-1])
+                #     trg = trg[1:].view(-1)
+                #     loss = criterion(output, trg)
+                loss.backward()
+                opt.optimizer.step()
+                total_loss += loss.item()
+        else:
+            total_loss = train_rnn(model, opt.train, opt.optimizer, criterion, 1)
 
-            if opt.SGDR == True: 
-                opt.sched.step()
-            
-            total_loss += loss.item()
-            
-            if (i + 1) % opt.printevery == 0:
-                p = int(100 * (i + 1) / opt.train_len)
-                avg_train_loss = total_loss/opt.printevery
-                print("   %dm: epoch %d [%s%s]  %d%%  loss = %.3f" %\
-                ((time.time() - start)//60, epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_train_loss), end='\r')
-                total_loss = 0
-            
-            if opt.checkpoint > 0 and ((time.time()-cptime)//60) // opt.checkpoint >= 1:
-                torch.save(model.state_dict(), 'weights/model_weights')
-                cptime = time.time()
+        if opt.SGDR == True: 
+            opt.sched.step()
+        if (i + 1) % opt.printevery == 0:
+            p = int(100 * (i + 1) / opt.train_len)
+            avg_train_loss = total_loss/opt.printevery
+            print("   %dm: epoch %d [%s%s]  %d%%  loss = %.3f" %\
+            ((time.time() - start)//60, epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_train_loss), end='\r')
+            total_loss = 0
+        
+        if opt.checkpoint > 0 and ((time.time()-cptime)//60) // opt.checkpoint >= 1:
+            torch.save(model.state_dict(), 'weights/model_weights')
+            cptime = time.time()
    
         avg_valid_loss = evaluate(model, opt.valid, criterion, opt) 
         val_loss_list.append(math.exp(avg_valid_loss))
         early_stop_flag = early_stopping_criterion(val_loss_list)
         if early_stop_flag == True: 
-            break 
-        else: 
-            pass
+            early_stopping_epochs.append(epoch)
+            print(f"\nModel hasn't improved for 5 epochs. This happened {len(early_stopping_epochs)} times.\n") 
+            early_stop_flag = early_stopping_criterion(val_loss_list, window_size=7)
+            if early_stop_flag == True: 
+                print(f"\nModel hasn't improved for 7 epochs, terminating train...\n")
+                break
         epoch_mins = round((time.time() - start)//60)
         bar_begin = "".join('#'*(100//5))
         bar_end = "".join(' '*(20-(100//5)))
