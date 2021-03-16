@@ -101,10 +101,10 @@ def train_rnn(model, iterator, optimizer, criterion, clip, opt):
 
         if (i + 1) % opt.printevery == 0:
             p = int(100 * (i + 1) / opt.train_len)
-            avg_train_loss = total_loss/opt.printevery
+            avg_train_loss = epoch_loss/opt.printevery
             print("   %dm: epoch %d [%s%s]  %d%%  loss = %.3f" %\
             ((time.time() - start)//60, epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_train_loss), end='\r')
-            total_loss = 0
+            epoch_loss = 0
         
     return epoch_loss
 
