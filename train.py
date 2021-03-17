@@ -103,7 +103,7 @@ def train_rnn(model, iterator, optimizer, criterion, clip, opt):
             p = int(100 * (i + 1) / opt.train_len)
             avg_train_loss = epoch_loss/opt.printevery
             print("   %dm: epoch %d [%s%s]  %d%%  loss = %.3f" %\
-            ((time.time() - opt.start)//60, epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_train_loss), end='\r')
+            ((time.time() - opt.start)//60, opt.epoch + 1, "".join('#'*(p//5)), "".join(' '*(20-(p//5))), p, avg_train_loss), end='\r')
             epoch_loss = 0
         
     return epoch_loss
@@ -119,6 +119,7 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
                  
     criterion = nn.CrossEntropyLoss(ignore_index = opt.trg_pad) # optional (new way)
     for epoch in range(opt.epochs):
+        opt.epoch = epoch
         model.train()
         total_loss = 0
 
