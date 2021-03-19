@@ -127,7 +127,7 @@ def create_dataset(opt, SRC, TRG, word_emb):
             train_iter, valid_iter = MyIterator.splits((train, valid), batch_size=opt.batchsize, device=opt.device,
                             repeat=False, sort_key=lambda x: (len(x.src), len(x.trg)), shuffle=True)
     else:
-        train_iterator, valid_iterator = data.BucketIterator.splits(
+        train_iter, valid_iter = data.BucketIterator.splits(
                     (train, valid), sort_key=lambda x: (len(x.src), len(x.trg)),
                     batch_size=opt.batchsize, device=opt.device)
 
