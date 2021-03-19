@@ -118,19 +118,24 @@ def create_dataset(opt, SRC, TRG, word_emb):
     train = generate_tabular_dataset(opt)
     valid = generate_tabular_dataset(opt, valid=True)
 
-    if opt.use_dynamic_batch == True:
-        train_iter, valid_iter = MyIterator.splits((train, valid), batch_size=opt.batchsize, device=opt.device,
-                        repeat=False, sort_key=lambda x: (len(x.src), len(x.trg)),
-                        batch_size_fn=batch_size_fn, shuffle=True) # batch_size_fn = dynamic batching
+    if opt.nmt_model_type == 'transformer':
+        if opt.use_dynamic_batch == True:
+            train_iter, valid_iter = MyIterator.splits((train, valid), batch_size=opt.batchsize, device=opt.device,
+                            repeat=False, sort_key=lambda x: (len(x.src), len(x.trg)),
+                            batch_size_fn=batch_size_fn, shuffle=True) # batch_size_fn = dynamic batching
+        else:
+            train_iter, valid_iter = MyIterator.splits((train, valid), batch_size=opt.batchsize, device=opt.device,
+                            repeat=False, sort_key=lambda x: (len(x.src), len(x.trg)), shuffle=True)
     else:
-        train_iter, valid_iter = MyIterator.splits((train, valid), batch_size=opt.batchsize, device=opt.device,
-                        repeat=False, sort_key=lambda x: (len(x.src), len(x.trg)), shuffle=True)
+        train_iterator, valid_iterator = data.BucketIterator.splits(
+                    (train, valid), sort_key=lambda x: (len(x.src), len(x.trg)),
+                    batch_size=opt.batchsize, device=opt.device)
 
     os.remove('translate_transformer_temp.csv')
 
     if opt.load_weights is None:
-        SRC.build_vocab(train)
-        TRG.build_vocab(train)
+        SRC.build_vocab(train, min_freq=2)
+        TRG.build_vocab(train, min_freq=2)
         if word_emb is not None:
             SRC_vectors = embedding_to_torchtext_vocab_translator(SRC, word_emb)
             TRG_vectors = embedding_to_torchtext_vocab_translator(TRG, word_emb)

@@ -129,7 +129,9 @@ def train_model(model, opt): # model = NaiveModel, Transformer or Seq2Seq
         if opt.checkpoint > 0:
             torch.save(model.state_dict(), 'weights/model_weights')
                     
-        print(f"Epoch has {get_len(opt.train)} batches.")
+        batch_number = get_len(opt.train)
+        opt.printevery = batch_number
+        print(f"Epoch has {batch_number} batches.")
         if opt.nmt_model_type == 'transformer':
             for i, batch in tqdm(enumerate(opt.train)): # opt.train = MyIterator
 
